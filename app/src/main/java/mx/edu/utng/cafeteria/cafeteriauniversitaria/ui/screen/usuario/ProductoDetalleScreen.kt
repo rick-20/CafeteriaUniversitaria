@@ -2,7 +2,9 @@ package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -10,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.ProductoViewModel
 
@@ -51,14 +52,14 @@ fun ProductoDetalleScreen(
                     .padding(paddingValues)
                     .padding(16.dp)
             ) {
-                AsyncImage(
+                /*AsyncImage(
                     model = producto.imagenUrl.ifEmpty { "https://via.placeholder.com/400" },
                     contentDescription = producto.nombre,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(300.dp),
                     contentScale = ContentScale.Crop
-                )
+                )*/
 
                 Spacer(modifier = Modifier.height(16.dp))
 

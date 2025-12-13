@@ -51,13 +51,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo o icono
-            Icon(
-                painter = painterResource(id = android.R.drawable.ic_menu_coffee_cup),
-                contentDescription = "Logo",
-                modifier = Modifier.size(120.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+
 
             Spacer(modifier = Modifier.height(32.dp))
 

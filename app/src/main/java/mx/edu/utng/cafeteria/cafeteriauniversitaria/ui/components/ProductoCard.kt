@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Producto
 
 @Composable
@@ -28,14 +27,6 @@ fun ProductoCard(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            AsyncImage(
-                model = producto.imagenUrl.ifEmpty { "https://via.placeholder.com/300x200?text=${producto.nombre}" },
-                contentDescription = producto.nombre,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
-                contentScale = ContentScale.Crop
-            )
 
             Column(
                 modifier = Modifier

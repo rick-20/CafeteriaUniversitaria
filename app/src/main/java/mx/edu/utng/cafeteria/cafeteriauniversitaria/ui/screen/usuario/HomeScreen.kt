@@ -5,9 +5,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,14 +45,16 @@ fun HomeScreen(
                         }
                     ) {
                         IconButton(onClick = onNavigateToCarrito) {
-                            Icon(Icons.Default.ShoppingCart, "Carrito")
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
                         }
                     }
+
                     IconButton(onClick = onNavigateToPedidos) {
-                        Icon(Icons.Default.ListAlt, "Pedidos")
+                        Icon(Icons.Default.ListAlt, contentDescription = "Pedidos")
                     }
+
                     IconButton(onClick = onNavigateToPerfil) {
-                        Icon(Icons.Default.Person, "Perfil")
+                        Icon(Icons.Default.Person, contentDescription = "Perfil")
                     }
                 }
             )
@@ -60,7 +65,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentAlignment = androidx.compose.ui.Alignment.Center
+                contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }

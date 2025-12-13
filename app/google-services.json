@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "809727967128",
+    "project_id": "cafeteriauniversitaria-f9bc3",
+    "storage_bucket": "cafeteriauniversitaria-f9bc3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809727967128:android:9a4cc38d05228e270a35ed",
+        "android_client_info": {
+          "package_name": "mx.edu.utng.cafeteria.cafeteriauniversitaria"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "809727967128-jddqrf2h1vhb4bh4ce5rv45fo5m82hnu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "mx.edu.utng.cafeteria.cafeteriauniversitaria",
+            "certificate_hash": "d036b65fe2bb749ea4c17f8e03db130b92045c9c"
+          }
+        },
+        {
+          "client_id": "809727967128-ggdcohqu9iq3u79jjr428k6grquv2pqr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2nzNLRrN3Pr0GuTyXwtjrbVBnCE8EEnc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "809727967128-ggdcohqu9iq3u79jjr428k6grquv2pqr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

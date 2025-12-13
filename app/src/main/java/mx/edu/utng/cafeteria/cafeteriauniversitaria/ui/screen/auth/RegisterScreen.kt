@@ -62,12 +62,6 @@ fun RegisterScreen(
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                painter = painterResource(id = android.R.drawable.ic_menu_coffee_cup),
-                contentDescription = "Logo",
-                modifier = Modifier.size(100.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
