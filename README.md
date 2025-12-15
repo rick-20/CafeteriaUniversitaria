@@ -25,12 +25,14 @@ https://github.com/user-attachments/assets/20a42fe1-2ceb-436f-b66b-3722197f5a26
 3. Ejecuta la app en un emulador o en un dispositico Android físico
 
 # EJEMPLOS
-https://github.com/user-attachments/assets/74b53ddb-7cd9-40c5-8252-850dc5ef8b5f
-https://github.com/user-attachments/assets/323d304d-3686-4f7c-bd1f-f1e370e778f7
-https://github.com/user-attachments/assets/db5162ae-34c7-4355-95aa-b97e1e3c2cae
-https://github.com/user-attachments/assets/f7d5684d-aec5-4917-a793-36e6b6b5674f
-https://github.com/user-attachments/assets/818d5e77-8d2f-4b3a-bded-f3fbc17b3b9e
+<img width="483" height="1079" alt="Captura de pantalla 2025-12-14 235837" src="https://github.com/user-attachments/assets/87d83429-f5e0-46ef-ad42-bc9c535038d0" />
+<img width="497" height="895" alt="Captura de pantalla 2025-12-14 235717" src="https://github.com/user-attachments/assets/5bb450ec-dc35-448e-9cb9-2ca3d95be9f1" />
+<img width="500" height="895" alt="Captura de pantalla 2025-12-14 235732" src="https://github.com/user-attachments/assets/bfcd6cc5-5060-4ce9-bd49-30b04be4cd41" />
+<img width="481" height="1079" alt="Captura de pantalla 2025-12-14 235449" src="https://github.com/user-attachments/assets/2cb9fa0b-fe8c-4608-9c92-cb762acfc064" />
+<img width="473" height="1071" alt="Captura de pantalla 2025-12-14 235701" src="https://github.com/user-attachments/assets/0dd2c43d-9ef4-42ae-908b-acf108a60457" />
+<img width="492" height="1076" alt="Captura de pantalla 2025-12-15 000049" src="https://github.com/user-attachments/assets/0e323494-cfcc-458f-82da-0c61ada59b15" />
+
 
 # Contactos y Agradecimietos
-Ricardo Aarón Olalde Tovar - rick-20
+Ricardo Aarón Olalde Tovar - rick-20 y 
 Angel Gabriel Rojas Hernandez - Deibo60
