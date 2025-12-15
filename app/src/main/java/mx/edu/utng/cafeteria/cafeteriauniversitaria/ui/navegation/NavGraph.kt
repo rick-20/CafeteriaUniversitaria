@@ -15,6 +15,7 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario.*
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin.*
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthState
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
+import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 
 @Composable
 fun NavGraph(
@@ -30,6 +31,8 @@ fun NavGraph(
         }
         else -> Screen.Login.route
     }
+
+    val carritoViewModel: CarritoViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -67,6 +70,7 @@ fun NavGraph(
         // Usuario Screens
         composable(Screen.Home.route) {
             HomeScreen(
+                carritoViewModel = carritoViewModel,
                 onNavigateToProducto = { productoId ->
                     navController.navigate(Screen.ProductoDetalle.createRoute(productoId))
                 },
@@ -83,12 +87,14 @@ fun NavGraph(
             val productoId = backStackEntry.arguments?.getString("productoId") ?: ""
             ProductoDetalleScreen(
                 productoId = productoId,
+                carritoViewModel = carritoViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
         composable(Screen.Carrito.route) {
             CarritoScreen(
+                carritoViewModel = carritoViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onFinalizarCompra = { navController.navigate(Screen.Pedidos.route) }
             )

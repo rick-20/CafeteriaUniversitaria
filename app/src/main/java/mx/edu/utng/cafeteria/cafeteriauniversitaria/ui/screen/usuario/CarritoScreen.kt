@@ -24,7 +24,7 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.PedidoViewModel
 fun CarritoScreen(
     onNavigateBack: () -> Unit,
     onFinalizarCompra: () -> Unit,
-    carritoViewModel: CarritoViewModel = viewModel(),
+    carritoViewModel: CarritoViewModel,
     pedidoViewModel: PedidoViewModel = viewModel(),
     authViewModel: AuthViewModel = viewModel()
 ) {

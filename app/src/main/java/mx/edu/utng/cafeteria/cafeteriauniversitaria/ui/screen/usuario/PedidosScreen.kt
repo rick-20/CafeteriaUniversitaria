@@ -10,8 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Pedido
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.PedidoViewModel
@@ -22,15 +24,14 @@ import java.util.*
 @Composable
 fun PedidosScreen(
     onNavigateBack: () -> Unit,
-    pedidoViewModel: PedidoViewModel = viewModel(),
-    authViewModel: AuthViewModel = viewModel()
+    pedidoViewModel: PedidoViewModel = viewModel()
 ) {
     val pedidos by pedidoViewModel.pedidos.collectAsState()
-    val currentUser by authViewModel.currentUser.collectAsState()
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
 
-    LaunchedEffect(currentUser) {
-        currentUser?.let { user ->
-            pedidoViewModel.cargarPedidosUsuario(user.id)
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            pedidoViewModel.cargarPedidosUsuario(uid)
         }
     }
 
@@ -40,123 +41,109 @@ fun PedidosScreen(
                 title = { Text("Mis Pedidos") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(Icons.Default.ArrowBack, null)
                     }
                 }
             )
         }
-    ) { paddingValues ->
-        if (pedidos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "No tienes pedidos",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Haz tu primer pedido",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
+    ) { padding ->
+
+        if (uid == null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Usuario no autenticado")
+            }
+        } else if (pedidos.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No tienes pedidos")
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(padding)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(pedidos) { pedido ->
-                    PedidoCard(pedido = pedido)
+                    PedidoCard(pedido)
                 }
             }
         }
     }
 }
 
+
+
 @Composable
 fun PedidoCard(pedido: Pedido) {
-    val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-    val fechaStr = dateFormat.format(pedido.fecha.toDate())
 
-    val estadoColor = when (pedido.estado) {
-        "pendiente" -> MaterialTheme.colorScheme.tertiary
-        "en_proceso" -> MaterialTheme.colorScheme.primary
-        "completado" -> Color(0xFF4CAF50)
-        else -> MaterialTheme.colorScheme.error
+    val dateFormat = remember {
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     }
 
-    val estadoTexto = when (pedido.estado) {
-        "pendiente" -> "Pendiente"
-        "en_proceso" -> "En Proceso"
-        "completado" -> "Completado"
-        "cancelado" -> "Cancelado"
-        else -> pedido.estado
+    // 🔐 Fecha ultra segura
+    val fechaStr = try {
+        when (val f = pedido.fecha) {
+            is com.google.firebase.Timestamp -> dateFormat.format(f.toDate())
+            is Date -> dateFormat.format(f)
+            else -> "Fecha no disponible"
+        }
+    } catch (e: Exception) {
+        "Fecha no disponible"
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+    // 🔐 ID ultra seguro
+    val pedidoId = try {
+        pedido.id.takeIf { it.length >= 8 }?.take(8) ?: "--------"
+    } catch (e: Exception) {
+        "--------"
+    }
+
+    val (estadoTexto, estadoColor) = when (pedido.estado) {
+        "pendiente" -> "Pendiente" to MaterialTheme.colorScheme.tertiary
+        "en_proceso" -> "En Proceso" to MaterialTheme.colorScheme.primary
+        "completado" -> "Completado" to Color(0xFF4CAF50)
+        "cancelado" -> "Cancelado" to MaterialTheme.colorScheme.error
+        else -> "Desconocido" to MaterialTheme.colorScheme.outline
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Pedido #${pedido.id.take(8)}",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("Pedido #$pedidoId", style = MaterialTheme.typography.titleMedium)
                 Surface(
-                    color = estadoColor.copy(alpha = 0.2f),
+                    color = estadoColor.copy(alpha = 0.15f),
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        text = estadoTexto,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        color = estadoColor,
-                        style = MaterialTheme.typography.labelMedium
+                        estadoTexto,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        color = estadoColor
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = fechaStr,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+            Text(fechaStr, style = MaterialTheme.typography.bodySmall)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            pedido.detalles.forEach { detalle ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "${detalle.cantidad}x ${detalle.nombreProducto}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "$${String.format("%.2f", detalle.subtotal)}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+            // 🔐 Detalles ultra seguros
+            if (pedido.detalles.isNullOrEmpty()) {
+                Text("Sin productos")
+            } else {
+                pedido.detalles.forEach { detalle ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("${detalle.cantidad}x ${detalle.nombreProducto}")
+                        Text("$${"%.2f".format(detalle.subtotal)}")
+                    }
                 }
             }
 
@@ -166,16 +153,11 @@ fun PedidoCard(pedido: Pedido) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Text("Total", fontWeight = FontWeight.Bold)
                 Text(
-                    text = "Total:",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                )
-                Text(
-                    text = "$${String.format("%.2f", pedido.total)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    "$${"%.2f".format(pedido.total)}",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }

@@ -26,7 +26,7 @@ fun HomeScreen(
     onNavigateToPedidos: () -> Unit,
     onNavigateToPerfil: () -> Unit,
     productoViewModel: ProductoViewModel = viewModel(),
-    carritoViewModel: CarritoViewModel = viewModel()
+    carritoViewModel: CarritoViewModel
 ) {
     val productos by productoViewModel.productos.collectAsState()
     val isLoading by productoViewModel.isLoading.collectAsState()

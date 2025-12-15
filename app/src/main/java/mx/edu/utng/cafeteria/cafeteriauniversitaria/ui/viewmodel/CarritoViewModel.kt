@@ -18,6 +18,8 @@ class CarritoViewModel : ViewModel() {
         get() = _items.value.sumOf { it.subtotal }
 
     fun agregarProducto(producto: Producto) {
+        //val itemExistente = _items.value.toMutableList()
+
         val itemExistente = _items.value.find { it.producto.id == producto.id }
 
         if (itemExistente != null) {

@@ -21,7 +21,7 @@ fun ProductoDetalleScreen(
     productoId: String,
     onNavigateBack: () -> Unit,
     productoViewModel: ProductoViewModel = viewModel(),
-    carritoViewModel: CarritoViewModel = viewModel()
+    carritoViewModel: CarritoViewModel
 ) {
     var cantidad by remember { mutableStateOf(1) }
     var productoAgregado by remember { mutableStateOf(false) }
