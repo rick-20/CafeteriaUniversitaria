@@ -185,6 +185,7 @@ La carpeta model nos sirve para crear las tablas de los medelos a usar, ejemplo:
 <img width="211" height="295" alt="image" src="https://github.com/user-attachments/assets/7f2b22fa-916b-47d1-a567-43320a6f81a2" />
 
 data/model/DetallePedido.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class DetallePedido(
@@ -194,10 +195,11 @@ data class DetallePedido(
     val precio_unitario: Double = 0.0,
     val subtotal: Double = 0.0
 )
-
+```
 El detalle pedido nos sirve para declarar los atributos del mismo, los cuales usaremos para almacenar los datos correspondientes.
 
 data/model/ItemCarrito.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class ItemCarrito(
@@ -207,8 +209,10 @@ data class ItemCarrito(
     val subtotal: Double
         get() = producto.precio * cantidad
 }
+```
 
 data/model/Pedido.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 import com.google.firebase.Timestamp
@@ -221,8 +225,10 @@ data class Pedido(
     val estado: String = "pendiente", // pendiente, en_proceso, completado, cancelado
     val detalles: List<DetallePedido> = emptyList()
 )
+```
 
 data/model/Producto.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class Producto(
@@ -234,8 +240,10 @@ data class Producto(
     val imagenUrl: String = "",
     val categoria: String = ""
 )
+```
 
 data/model/Promocion.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 import com.google.firebase.Timestamp
@@ -248,8 +256,10 @@ data class Promocion(
     val fecha_inicio: Timestamp = Timestamp.now(),
     val fecha_fin: Timestamp = Timestamp.now()
 )
+```
 
 data/model/Usuario.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class Usuario(
@@ -262,12 +272,12 @@ data class Usuario(
     val id_universidad: String = "",
     val rol: String = "usuario" // "admin" o "usuario"
 )
-
+```
   # data/repository
 Este paquete se utilizara para crear los repositorios, estos nos servirán para organizar y obtener el acceso a los datos de la app, facilitando la prueba y la moduladidad.
 
 data/repository/AuthRepository.kt
-
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
@@ -324,8 +334,10 @@ class AuthRepository {
         auth.signOut()
     }
 }
+```
 
 data/repository/PedidoRepository.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -393,8 +405,10 @@ class PedidoRepository {
         }
     }
 }
+```
 
 data/repository/ProductoRepository.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -473,8 +487,10 @@ class ProductoRepository {
         }
     }
 }
+```
 
 data/repository/PromocionRepository.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -525,10 +541,12 @@ class PromocionRepository {
         }
     }
 }
+```
 
 # Capa de Interfaz de Usuario (UI)
 # ui/components
 ui/components/ProductoCard.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components
 
 import androidx.compose.foundation.layout.*
@@ -595,8 +613,10 @@ fun ProductoCard(
         }
     }
 }
+```
 
 ui/components/PromocionesCard.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components
 
 import androidx.compose.foundation.layout.Column
@@ -631,11 +651,12 @@ fun PromocionesCard(promocion: Promocion) {
         }
     }
 }
-
+```
 # ui/navegation
 Pasamos al apartado de UI con navegación
 
 ui/navegation/NavGraph.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.navegation
 
 import androidx.compose.runtime.Composable
@@ -777,8 +798,10 @@ fun NavGraph(
         }
     }
 }
+```
 
 ui/navegation/Screen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.navegation
 
 sealed class Screen(val route: String) {
@@ -797,6 +820,7 @@ sealed class Screen(val route: String) {
     object PromocionesAdmin : Screen("admin/promociones")
     object PedidosAdmin : Screen("admin/pedidos")
 }
+```
 
 # Pasamos a las Screen o Pantallas que serán mostradas al usuario
 # screen/admin
@@ -804,6 +828,7 @@ Primero con las vistas correspondientes a los administradores
 
 screen/admin/AdminHomeScreen.kt
 Esta Screen se encargará de mostrar el "Inicio" de la vista del admin
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -955,9 +980,11 @@ fun AdminMenuCard(
         }
     }
 }
+```
 
 screen/admin/PedidosAdminScreen.kt
 Vista de los pedidos de admin, es decir, aquí le aparecerán los pedidos de los alumnos
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -1162,8 +1189,10 @@ fun PedidoAdminCard(
         )
     }
 }
+```
 
 screen/admin/ProductosCrudScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -1408,8 +1437,10 @@ fun ProductoDialog(
         }
     )
 }
+```
 
 screen/admin/PromocionesScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -1664,11 +1695,13 @@ fun PromocionDialog(
         }
     )
 }
+```
 
 # screen/auth
 Este paquete será la autenticación, donde se guardará el inicio, registro y cierre de sesión de los usuarios
 
 screen/auth/LoginScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.auth
 
 import androidx.compose.foundation.Image
@@ -1806,8 +1839,10 @@ fun LoginScreen(
         }
     }
 }
+```
 
 screen/auth/RegistrerScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.auth
 
 import androidx.compose.foundation.layout.*
@@ -1992,10 +2027,12 @@ fun RegisterScreen(
         }
     }
 }
+```
 
 # Pasamos a las vistas de los usuarios (Clientes)
 # screen/usuario
 screen/usuario/CarritoScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
@@ -2190,8 +2227,10 @@ fun CarritoItemCard(
         }
     }
 }
+```
 
 screen/usuario/HomeScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
@@ -2304,8 +2343,10 @@ fun HomeScreen(
         }
     }
 }
+```
 
 screen/usuario/PedidosScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
@@ -2454,8 +2495,10 @@ fun PedidoCard(pedido: Pedido) {
         }
     }
 }
+```
 
 screen/usuario/PerfilScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
@@ -2592,8 +2635,10 @@ fun ProfileInfoRow(
         }
     }
 }
+```
 
 screen/usuario/ProductoDetalleScreen.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
@@ -2715,9 +2760,11 @@ fun ProductoDetalleScreen(
         }
     }
 }
+```
 
 # Pasamos a los temas y colores de la app
 theme/Color.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
 import androidx.compose.ui.graphics.Color
@@ -2735,8 +2782,10 @@ val CoffeeDark = Color(0xFF5D2E0F)
 val CoffeeAccent = Color(0xFFD2691E)
 val CreamLight = Color(0xFFFFF8DC)
 val CreamDark = Color(0xFFFFE4B5)
+```
 
 theme/Theme.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
 import android.app.Activity
@@ -2804,8 +2853,10 @@ fun CafeteriaUniversitariaTheme(
         content = content
     )
 }
+```
 
 theme/Type.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
 import androidx.compose.material3.Typography
@@ -2837,11 +2888,13 @@ val Typography = Typography(
         letterSpacing = 0.5.sp
     )
 )
+```
 
 # Ahora haremos los ViewModels 
 Los viewModel sirven para almacenar y gestionar los datos de la interfaz de usuario (UI), separando la lógica de la UI de las actividades/fragmentos y sobreviviendo a cambios de configuración como la rotación de pantalla, lo que evita perder datos y reconstruir la UI innecesariamente.
 
 viewmodel/AdminViewModel.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -2882,8 +2935,9 @@ class AdminViewModel : ViewModel() {
         }
     }
 }
-
+```
 viewmodel/AuthViewModel.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -2966,8 +3020,10 @@ sealed class AuthState {
     data class Authenticated(val usuario: Usuario) : AuthState()
     data class Error(val message: String) : AuthState()
 }
+```
 
 viewmodel/CarritoViewModel.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -3010,8 +3066,10 @@ class CarritoViewModel : ViewModel() {
         _cantidadItems.value = 0
     }
 }
+```
 
 viewmodel/PedidoViewModel.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -3078,8 +3136,10 @@ class PedidoViewModel : ViewModel() {
         _pedidoCreado.value = false
     }
 }
+```
 
 viewmodel/ProductoViewModel.kt
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -3125,9 +3185,11 @@ class ProductoViewModel : ViewModel() {
         }
     }
 }
+```
 
 # Finalmente con MainActivity, desde donde se ejecutará y unirá cada complemento
 MainActivity
+```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -3173,6 +3235,7 @@ class ProductoViewModel : ViewModel() {
         }
     }
 }
+```
 
 # EJECUCIÓN
 1. Abre el proyecto en Android Studio.
