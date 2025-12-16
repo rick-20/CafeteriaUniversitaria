@@ -103,7 +103,7 @@ fun AdminHomeScreen(
                         onClick = onNavigateToPedidos
                     )
                 }
-                item {
+                /*item {
                     AdminMenuCard(
                         icon = Icons.Default.BarChart,
                         title = "Estadísticas",
@@ -111,7 +111,7 @@ fun AdminHomeScreen(
                         onClick = { },
                         enabled = false
                     )
-                }
+                }*/
             }
         }
     }

@@ -1,7 +1,9 @@
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -15,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components.ProductoCard
+import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components.PromocionesCard
+import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AdminViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.ProductoViewModel
 
@@ -26,8 +30,10 @@ fun HomeScreen(
     onNavigateToPedidos: () -> Unit,
     onNavigateToPerfil: () -> Unit,
     productoViewModel: ProductoViewModel = viewModel(),
-    carritoViewModel: CarritoViewModel
+    carritoViewModel: CarritoViewModel,
+    adminViewModel: AdminViewModel = viewModel()
 ) {
+    val promociones by adminViewModel.promociones.collectAsState()
     val productos by productoViewModel.productos.collectAsState()
     val isLoading by productoViewModel.isLoading.collectAsState()
     val cantidadCarrito by carritoViewModel.cantidadItems.collectAsState()
@@ -45,21 +51,20 @@ fun HomeScreen(
                         }
                     ) {
                         IconButton(onClick = onNavigateToCarrito) {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
+                            Icon(Icons.Default.ShoppingCart, "Carrito")
                         }
                     }
-
                     IconButton(onClick = onNavigateToPedidos) {
-                        Icon(Icons.Default.ListAlt, contentDescription = "Pedidos")
+                        Icon(Icons.Default.ListAlt, "Pedidos")
                     }
-
                     IconButton(onClick = onNavigateToPerfil) {
-                        Icon(Icons.Default.Person, contentDescription = "Perfil")
+                        Icon(Icons.Default.Person, "Perfil")
                     }
                 }
             )
         }
     ) { paddingValues ->
+
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -70,23 +75,46 @@ fun HomeScreen(
                 CircularProgressIndicator()
             }
         } else {
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
+
+                if (promociones.isNotEmpty()) {
+                    item(span = { GridItemSpan(2) }) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Promociones",
+                                style = MaterialTheme.typography.titleLarge
+                            )
+
+                            promociones.forEach { promo ->
+                                PromocionesCard(promocion = promo)
+                            }
+                        }
+                    }
+                }
+
                 items(productos.filter { it.disponible }) { producto ->
                     ProductoCard(
                         producto = producto,
                         onClick = { onNavigateToProducto(producto.id) },
-                        onAddToCart = { carritoViewModel.agregarProducto(producto) }
+                        onAddToCart = {
+                            carritoViewModel.agregarProducto(producto)
+                        }
                     )
                 }
             }
         }
     }
 }
+

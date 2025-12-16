@@ -87,11 +87,11 @@ fun PerfilScreen(
 
                     Divider(modifier = Modifier.padding(vertical = 12.dp))
 
-                    ProfileInfoRow(
+                    /*ProfileInfoRow(
                         icon = Icons.Default.Star,
                         label = "Puntos Acumulados",
                         value = currentUser?.puntos_acumulados?.toString() ?: "0"
-                    )
+                    )*/
 
                     Divider(modifier = Modifier.padding(vertical = 12.dp))
 
