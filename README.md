@@ -286,12 +286,30 @@ import com.google.firebase.firestore.FirebaseFirestore
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Usuario
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Repositorio encargado de la autenticación de usuarios
+ * y de la gestión de datos del usuario en Firebase.
+ */
 class AuthRepository {
+
+    /** Instancia de autenticación de Firebase */
     private val auth = FirebaseAuth.getInstance()
+
+    /** Instancia de Firestore para manejo de usuarios */
     private val firestore = FirebaseFirestore.getInstance()
-/
-    val currentUser: FirebaseUser? get() = auth.currentUser
-/
+
+    /**
+     * Obtiene el usuario actualmente autenticado
+     */
+    val currentUser: FirebaseUser?
+        get() = auth.currentUser
+
+    /**
+     * Inicia sesión con correo y contraseña
+     * @param email correo del usuario
+     * @param password contraseña del usuario
+     * @return Resultado con el usuario autenticado o error
+     */
     suspend fun login(email: String, password: String): Result<FirebaseUser> {
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
@@ -300,26 +318,49 @@ class AuthRepository {
             Result.failure(e)
         }
     }
-/
-    suspend fun register(email: String, password: String, usuario: Usuario): Result<FirebaseUser> {
+
+    /**
+     * Registra un nuevo usuario en Firebase Authentication
+     * y guarda sus datos en Firestore
+     * @param email correo del usuario
+     * @param password contraseña
+     * @param usuario objeto Usuario con los datos
+     */
+    suspend fun register(
+        email: String,
+        password: String,
+        usuario: Usuario
+    ): Result<FirebaseUser> {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user!!.uid
-/
-            // Guardar usuario en Firestore
+
+            // Se guarda el usuario en la colección "usuarios"
             val nuevoUsuario = usuario.copy(id = uid, correo = email)
-            firestore.collection("usuarios").document(uid).set(nuevoUsuario).await()
-/
+            firestore.collection("usuarios")
+                .document(uid)
+                .set(nuevoUsuario)
+                .await()
+
             Result.success(result.user!!)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-/
+
+    /**
+     * Obtiene los datos del usuario desde Firestore
+     * @param uid ID del usuario
+     */
     suspend fun getUserData(uid: String): Result<Usuario> {
         return try {
-            val snapshot = firestore.collection("usuarios").document(uid).get().await()
+            val snapshot = firestore.collection("usuarios")
+                .document(uid)
+                .get()
+                .await()
+
             val usuario = snapshot.toObject(Usuario::class.java)
+
             if (usuario != null) {
                 Result.success(usuario)
             } else {
@@ -329,7 +370,10 @@ class AuthRepository {
             Result.failure(e)
         }
     }
-/
+
+    /**
+     * Cierra la sesión del usuario actual
+     */
     fun logout() {
         auth.signOut()
     }
@@ -348,9 +392,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Repositorio encargado de manejar los pedidos
+ * realizados por los usuarios en la aplicación.
+ */
 class PedidoRepository {
+
+    /** Instancia de Firestore */
     private val firestore = FirebaseFirestore.getInstance()
-/
+
+    /**
+     * Obtiene los pedidos de un usuario específico
+     * ordenados por fecha descendente
+     */
     fun getPedidosUsuario(userId: String): Flow<List<Pedido>> = callbackFlow {
         val listener = firestore.collection("pedidos")
             .whereEqualTo("id_usuario", userId)
@@ -360,14 +414,20 @@ class PedidoRepository {
                     close(error)
                     return@addSnapshotListener
                 }
+
                 val pedidos = snapshot?.documents?.mapNotNull {
                     it.toObject(Pedido::class.java)?.copy(id = it.id)
                 } ?: emptyList()
+
                 trySend(pedidos)
             }
+
         awaitClose { listener.remove() }
     }
-/
+
+    /**
+     * Obtiene todos los pedidos (modo administrador)
+     */
     fun getTodosPedidos(): Flow<List<Pedido>> = callbackFlow {
         val listener = firestore.collection("pedidos")
             .orderBy("fecha", Query.Direction.DESCENDING)
@@ -376,24 +436,38 @@ class PedidoRepository {
                     close(error)
                     return@addSnapshotListener
                 }
+
                 val pedidos = snapshot?.documents?.mapNotNull {
                     it.toObject(Pedido::class.java)?.copy(id = it.id)
                 } ?: emptyList()
+
                 trySend(pedidos)
             }
+
         awaitClose { listener.remove() }
     }
-/
+
+    /**
+     * Crea un nuevo pedido en Firestore
+     */
     suspend fun crearPedido(pedido: Pedido): Result<String> {
         return try {
-            val docRef = firestore.collection("pedidos").add(pedido).await()
+            val docRef = firestore.collection("pedidos")
+                .add(pedido)
+                .await()
             Result.success(docRef.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-/
-    suspend fun actualizarEstadoPedido(pedidoId: String, nuevoEstado: String): Result<Unit> {
+
+    /**
+     * Actualiza el estado de un pedido
+     */
+    suspend fun actualizarEstadoPedido(
+        pedidoId: String,
+        nuevoEstado: String
+    ): Result<Unit> {
         return try {
             firestore.collection("pedidos")
                 .document(pedidoId)
@@ -420,10 +494,18 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import android.net.Uri
 
+/**
+ * Repositorio encargado de la gestión de productos
+ * de la cafetería.
+ */
 class ProductoRepository {
+
     private val firestore = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
-/
+
+    /**
+     * Obtiene todos los productos en tiempo real
+     */
     fun getProductos(): Flow<List<Producto>> = callbackFlow {
         val listener = firestore.collection("productos")
             .addSnapshotListener { snapshot, error ->
@@ -431,18 +513,30 @@ class ProductoRepository {
                     close(error)
                     return@addSnapshotListener
                 }
+
                 val productos = snapshot?.documents?.mapNotNull {
                     it.toObject(Producto::class.java)?.copy(id = it.id)
                 } ?: emptyList()
+
                 trySend(productos)
             }
+
         awaitClose { listener.remove() }
     }
-/
+
+    /**
+     * Obtiene un producto por su ID
+     */
     suspend fun getProductoById(id: String): Result<Producto> {
         return try {
-            val snapshot = firestore.collection("productos").document(id).get().await()
-            val producto = snapshot.toObject(Producto::class.java)?.copy(id = snapshot.id)
+            val snapshot = firestore.collection("productos")
+                .document(id)
+                .get()
+                .await()
+
+            val producto = snapshot.toObject(Producto::class.java)
+                ?.copy(id = snapshot.id)
+
             if (producto != null) {
                 Result.success(producto)
             } else {
@@ -452,41 +546,70 @@ class ProductoRepository {
             Result.failure(e)
         }
     }
-/
-    suspend fun agregarProducto(producto: Producto, imagenUri: Uri?): Result<String> {
+
+    /**
+     * Agrega un nuevo producto con imagen opcional
+     */
+    suspend fun agregarProducto(
+        producto: Producto,
+        imagenUri: Uri?
+    ): Result<String> {
         return try {
             var imagenUrl = ""
-/
+
             if (imagenUri != null) {
-                val storageRef = storage.reference.child("productos/${System.currentTimeMillis()}.jpg")
+                val storageRef = storage.reference
+                    .child("productos/${System.currentTimeMillis()}.jpg")
+
                 storageRef.putFile(imagenUri).await()
                 imagenUrl = storageRef.downloadUrl.await().toString()
             }
-/
+
             val productoConImagen = producto.copy(imagenUrl = imagenUrl)
-            val docRef = firestore.collection("productos").add(productoConImagen).await()
+            val docRef = firestore.collection("productos")
+                .add(productoConImagen)
+                .await()
+
             Result.success(docRef.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    suspend fun actualizarProducto(id: String, producto: Producto): Result<Unit> {
+
+    /**
+     * Actualiza un producto existente
+     */
+    suspend fun actualizarProducto(
+        id: String,
+        producto: Producto
+    ): Result<Unit> {
         return try {
-            firestore.collection("productos").document(id).set(producto).await()
+            firestore.collection("productos")
+                .document(id)
+                .set(producto)
+                .await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    /**
+     * Elimina un producto
+     */
     suspend fun eliminarProducto(id: String): Result<Unit> {
         return try {
-            firestore.collection("productos").document(id).delete().await()
+            firestore.collection("productos")
+                .document(id)
+                .delete()
+                .await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 }
+
 ```
 
 data/repository/PromocionRepository.kt
@@ -500,47 +623,102 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Repositorio encargado de manejar todas las operaciones
+ * relacionadas con la colección "promociones" en Firebase Firestore
+ */
 class PromocionRepository {
+
+    // Instancia de Firestore
     private val firestore = FirebaseFirestore.getInstance()
+
+    /**
+     * Obtiene la lista de promociones en tiempo real
+     * usando Flow para escuchar cambios en Firestore
+     */
     fun getPromociones(): Flow<List<Promocion>> = callbackFlow {
+
+        // Listener que escucha cambios en la colección "promociones"
         val listener = firestore.collection("promociones")
             .addSnapshotListener { snapshot, error ->
+
+                // Si ocurre un error se cierra el flujo
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
+
+                // Convierte los documentos de Firestore a objetos Promocion
                 val promociones = snapshot?.documents?.mapNotNull {
                     it.toObject(Promocion::class.java)?.copy(id = it.id)
                 } ?: emptyList()
+
+                // Envía la lista de promociones al Flow
                 trySend(promociones)
             }
+
+        // Se elimina el listener cuando el Flow deja de usarse
         awaitClose { listener.remove() }
     }
+
+    /**
+     * Agrega una nueva promoción a Firestore
+     * @param promocion objeto Promocion a guardar
+     * @return Result con el id del documento creado
+     */
     suspend fun agregarPromocion(promocion: Promocion): Result<String> {
         return try {
-            val docRef = firestore.collection("promociones").add(promocion).await()
+            // Agrega la promoción a la colección
+            val docRef = firestore.collection("promociones")
+                .add(promocion)
+                .await()
+
+            // Retorna el id generado por Firestore
             Result.success(docRef.id)
         } catch (e: Exception) {
+            // Retorna el error en caso de falla
             Result.failure(e)
         }
     }
+
+    /**
+     * Actualiza una promoción existente
+     * @param id id del documento a actualizar
+     * @param promocion nuevos datos de la promoción
+     */
     suspend fun actualizarPromocion(id: String, promocion: Promocion): Result<Unit> {
         return try {
-            firestore.collection("promociones").document(id).set(promocion).await()
+            // Reemplaza los datos del documento con el id indicado
+            firestore.collection("promociones")
+                .document(id)
+                .set(promocion)
+                .await()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    /**
+     * Elimina una promoción de Firestore
+     * @param id id del documento a eliminar
+     */
     suspend fun eliminarPromocion(id: String): Result<Unit> {
         return try {
-            firestore.collection("promociones").document(id).delete().await()
+            // Borra el documento con el id indicado
+            firestore.collection("promociones")
+                .document(id)
+                .delete()
+                .await()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 }
+
 ```
 
 # Capa de Interfaz de Usuario (UI)
@@ -556,48 +734,66 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Producto
 
+/**
+ * Componente que muestra la información de un producto
+ * en forma de tarjeta (Card)
+ */
 @Composable
 fun ProductoCard(
-    producto: Producto,
-    onClick: () -> Unit,
-    onAddToCart: () -> Unit
+    producto: Producto,       // Producto a mostrar
+    onClick: () -> Unit,       // Acción al seleccionar la tarjeta
+    onAddToCart: () -> Unit    // Acción para agregar el producto al carrito
 ) {
+
+    // Tarjeta principal del producto
     Card(
         onClick = onClick,
         modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp)
+            .fillMaxWidth()    // Ocupa todo el ancho disponible
+            .height(250.dp)    // Altura fija de la tarjeta
     ) {
+
+        // Contenedor vertical para organizar el contenido
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
+
+            // Sección de información del producto
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(12.dp) // Espaciado interno
             ) {
+
+                // Nombre del producto
                 Text(
                     text = producto.nombre,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1,                    // Máximo una línea
+                    overflow = TextOverflow.Ellipsis // "..." si el texto es largo
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
+
+                // Fila para precio y botón de carrito
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
+                    // Precio del producto
                     Text(
                         text = "$${producto.precio}",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
+
+                    // Botón para agregar al carrito
                     IconButton(
                         onClick = { onAddToCart() },
                         modifier = Modifier.size(32.dp)
@@ -613,6 +809,7 @@ fun ProductoCard(
         }
     }
 }
+
 ```
 
 ui/components/PromocionesCard.kt
@@ -631,19 +828,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Promocion
 
+/**
+ * Componente que muestra la información de una promoción
+ * dentro de una tarjeta (Card)
+ */
 @Composable
-fun PromocionesCard(promocion: Promocion) {
+fun PromocionesCard(
+    promocion: Promocion // Promoción a mostrar
+) {
+
+    // Tarjeta principal de la promoción
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(), // Ocupa todo el ancho disponible
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer // Color de fondo
         )
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+
+        // Contenedor vertical para el contenido
+        Column(
+            modifier = Modifier.padding(12.dp) // Espaciado interno
+        ) {
+
+            // Nombre de la promoción
             Text(
                 text = promocion.nombre,
                 style = MaterialTheme.typography.titleMedium
             )
+
+            // Descripción de la promoción
             Text(
                 text = promocion.descripcion,
                 style = MaterialTheme.typography.bodyMedium
@@ -651,6 +864,7 @@ fun PromocionesCard(promocion: Promocion) {
         }
     }
 }
+
 ```
 # ui/navegation
 Pasamos al apartado de UI con navegación
@@ -676,29 +890,53 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthState
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 
+/**
+ * Gráfico de navegación principal de la aplicación
+ * Controla las rutas y pantallas según el rol del usuario
+ */
 @Composable
 fun NavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel = viewModel()
 ) {
+
+    // Estado de autenticación
     val authState by authViewModel.authState.collectAsState()
+
+    // Usuario actual autenticado
     val currentUser by authViewModel.currentUser.collectAsState()
+
+    // Determina la pantalla inicial según el estado y rol
     val startDestination = when (authState) {
         is AuthState.Authenticated -> {
-            if (currentUser?.rol == "admin") Screen.AdminHome.route else Screen.Home.route
+            if (currentUser?.rol == "admin")
+                Screen.AdminHome.route
+            else
+                Screen.Home.route
         }
         else -> Screen.Login.route
     }
+
+    // ViewModel del carrito (compartido entre pantallas)
     val carritoViewModel: CarritoViewModel = viewModel()
+
+    // Host de navegación
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Auth Screens
+
+        /* =======================
+           Pantallas de Autenticación
+           ======================= */
+
         composable(Screen.Login.route) {
             LoginScreen(
-                onNavigateToRegister = { navController.navigate(Screen.Register.route) },
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                },
                 onLoginSuccess = { usuario ->
+                    // Redirige según el rol
                     if (usuario.rol == "admin") {
                         navController.navigate(Screen.AdminHome.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
@@ -711,9 +949,12 @@ fun NavGraph(
                 }
             )
         }
+
         composable(Screen.Register.route) {
             RegisterScreen(
-                onNavigateToLogin = { navController.popBackStack() },
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
                 onRegisterSuccess = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
@@ -721,44 +962,75 @@ fun NavGraph(
                 }
             )
         }
-        // Usuario Screens
+
+        /* =======================
+           Pantallas de Usuario
+           ======================= */
+
         composable(Screen.Home.route) {
             HomeScreen(
                 carritoViewModel = carritoViewModel,
                 onNavigateToProducto = { productoId ->
-                    navController.navigate(Screen.ProductoDetalle.createRoute(productoId))
+                    navController.navigate(
+                        Screen.ProductoDetalle.createRoute(productoId)
+                    )
                 },
-                onNavigateToCarrito = { navController.navigate(Screen.Carrito.route) },
-                onNavigateToPedidos = { navController.navigate(Screen.Pedidos.route) },
-                onNavigateToPerfil = { navController.navigate(Screen.Perfil.route) }
+                onNavigateToCarrito = {
+                    navController.navigate(Screen.Carrito.route)
+                },
+                onNavigateToPedidos = {
+                    navController.navigate(Screen.Pedidos.route)
+                },
+                onNavigateToPerfil = {
+                    navController.navigate(Screen.Perfil.route)
+                }
             )
         }
+
         composable(
             route = Screen.ProductoDetalle.route,
-            arguments = listOf(navArgument("productoId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("productoId") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
-            val productoId = backStackEntry.arguments?.getString("productoId") ?: ""
+            // Obtiene el id del producto enviado por navegación
+            val productoId =
+                backStackEntry.arguments?.getString("productoId") ?: ""
+
             ProductoDetalleScreen(
                 productoId = productoId,
                 carritoViewModel = carritoViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
+
         composable(Screen.Carrito.route) {
             CarritoScreen(
                 carritoViewModel = carritoViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onFinalizarCompra = { navController.navigate(Screen.Pedidos.route) }
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onFinalizarCompra = {
+                    navController.navigate(Screen.Pedidos.route)
+                }
             )
         }
+
         composable(Screen.Pedidos.route) {
             PedidosScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
+
         composable(Screen.Perfil.route) {
             PerfilScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) {
@@ -767,12 +1039,22 @@ fun NavGraph(
                 }
             )
         }
-        // Admin Screens
+
+        /* =======================
+           Pantallas de Administrador
+           ======================= */
+
         composable(Screen.AdminHome.route) {
             AdminHomeScreen(
-                onNavigateToProductos = { navController.navigate(Screen.ProductosCrud.route) },
-                onNavigateToPromociones = { navController.navigate(Screen.PromocionesAdmin.route) },
-                onNavigateToPedidos = { navController.navigate(Screen.PedidosAdmin.route) },
+                onNavigateToProductos = {
+                    navController.navigate(Screen.ProductosCrud.route)
+                },
+                onNavigateToPromociones = {
+                    navController.navigate(Screen.PromocionesAdmin.route)
+                },
+                onNavigateToPedidos = {
+                    navController.navigate(Screen.PedidosAdmin.route)
+                },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) {
@@ -781,45 +1063,98 @@ fun NavGraph(
                 }
             )
         }
+
         composable(Screen.ProductosCrud.route) {
             ProductosCrudScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
+
         composable(Screen.PromocionesAdmin.route) {
             PromocionesScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
+
         composable(Screen.PedidosAdmin.route) {
             PedidosAdminScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
     }
 }
+
 ```
 
 ui/navegation/Screen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.navegation
 
+/**
+ * Clase sellada que define todas las rutas de navegación
+ * utilizadas en la aplicación
+ */
 sealed class Screen(val route: String) {
+
+    /* =======================
+       Pantallas de Autenticación
+       ======================= */
+
+    // Pantalla de inicio de sesión
     object Login : Screen("login")
+
+    // Pantalla de registro de usuarios
     object Register : Screen("register")
+
+
+    /* =======================
+       Pantallas de Usuario
+       ======================= */
+
+    // Pantalla principal del usuario
     object Home : Screen("home")
+
+    // Pantalla de detalle de un producto
+    // Recibe como parámetro el id del producto
     object ProductoDetalle : Screen("producto/{productoId}") {
+
+        // Construye la ruta completa con el id del producto
         fun createRoute(productoId: String) = "producto/$productoId"
     }
+
+    // Pantalla del carrito de compras
     object Carrito : Screen("carrito")
+
+    // Pantalla de pedidos del usuario
     object Pedidos : Screen("pedidos")
+
+    // Pantalla de perfil del usuario
     object Perfil : Screen("perfil")
-    // Admin
+
+
+    /* =======================
+       Pantallas de Administrador
+       ======================= */
+
+    // Pantalla principal del administrador
     object AdminHome : Screen("admin/home")
+
+    // Pantalla para administrar productos
     object ProductosCrud : Screen("admin/productos")
+
+    // Pantalla para administrar promociones
     object PromocionesAdmin : Screen("admin/promociones")
+
+    // Pantalla para administrar pedidos
     object PedidosAdmin : Screen("admin/pedidos")
 }
+
 ```
 
 # Pasamos a las Screen o Pantallas que serán mostradas al usuario
@@ -844,34 +1179,54 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 
+/**
+ * Pantalla principal del administrador
+ * Muestra el panel con accesos a las funciones principales
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminHomeScreen(
-    onNavigateToProductos: () -> Unit,
-    onNavigateToPromociones: () -> Unit,
-    onNavigateToPedidos: () -> Unit,
-    onLogout: () -> Unit,
+    onNavigateToProductos: () -> Unit,     // Navegar a gestión de productos
+    onNavigateToPromociones: () -> Unit,   // Navegar a gestión de promociones
+    onNavigateToPedidos: () -> Unit,       // Navegar a gestión de pedidos
+    onLogout: () -> Unit,                  // Cerrar sesión
     authViewModel: AuthViewModel = viewModel()
 ) {
+
+    // Usuario autenticado (admin)
     val currentUser by authViewModel.currentUser.collectAsState()
+
+    // Estructura base de la pantalla
     Scaffold(
         topBar = {
+
+            // Barra superior con título y botón de cerrar sesión
             TopAppBar(
                 title = { Text("Panel de Administración") },
                 actions = {
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.ExitToApp, "Cerrar Sesión")
+                        Icon(
+                            Icons.Default.ExitToApp,
+                            contentDescription = "Cerrar Sesión"
+                        )
                     }
                 }
             )
         }
     ) { paddingValues ->
+
+        // Contenido principal
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+
+            /* =======================
+               Tarjeta de información del admin
+               ======================= */
+
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -881,13 +1236,18 @@ fun AdminHomeScreen(
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
+                    // Ícono del administrador
                     Icon(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Admin",
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
+
                     Spacer(modifier = Modifier.width(16.dp))
+
+                    // Nombre y rol del admin
                     Column {
                         Text(
                             text = currentUser?.nombre ?: "Administrador",
@@ -901,12 +1261,20 @@ fun AdminHomeScreen(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(24.dp))
+
+            /* =======================
+               Menú de opciones del administrador
+               ======================= */
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+
+                // Opción: Productos
                 item {
                     AdminMenuCard(
                         icon = Icons.Default.Fastfood,
@@ -915,6 +1283,8 @@ fun AdminHomeScreen(
                         onClick = onNavigateToProductos
                     )
                 }
+
+                // Opción: Promociones
                 item {
                     AdminMenuCard(
                         icon = Icons.Default.LocalOffer,
@@ -923,6 +1293,8 @@ fun AdminHomeScreen(
                         onClick = onNavigateToPromociones
                     )
                 }
+
+                // Opción: Pedidos
                 item {
                     AdminMenuCard(
                         icon = Icons.Default.Receipt,
@@ -936,21 +1308,28 @@ fun AdminHomeScreen(
     }
 }
 
+/**
+ * Tarjeta reutilizable para las opciones del menú del administrador
+ */
 @Composable
 fun AdminMenuCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    description: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true
+    icon: androidx.compose.ui.graphics.vector.ImageVector, // Ícono del menú
+    title: String,                                        // Título
+    description: String,                                  // Descripción
+    onClick: () -> Unit,                                  // Acción al presionar
+    enabled: Boolean = true                               // Habilitar / deshabilitar
 ) {
+
+    // Tarjeta del menú
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
+            .aspectRatio(1f), // Mantiene forma cuadrada
         enabled = enabled
     ) {
+
+        // Contenido de la tarjeta
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -958,20 +1337,31 @@ fun AdminMenuCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+
+            // Ícono
             Icon(
                 imageVector = icon,
                 contentDescription = title,
                 modifier = Modifier.size(48.dp),
-                tint = if (enabled) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                tint = if (enabled)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Título
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                color = if (enabled)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
             )
+
+            // Descripción
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
@@ -980,6 +1370,7 @@ fun AdminMenuCard(
         }
     }
 }
+
 ```
 
 screen/admin/PedidosAdminScreen.kt
@@ -1004,28 +1395,45 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.PedidoViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Pantalla de administración para visualizar
+ * y gestionar todos los pedidos del sistema
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PedidosAdminScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateBack: () -> Unit,                 // Regresar a la pantalla anterior
     pedidoViewModel: PedidoViewModel = viewModel()
 ) {
+
+    // Lista de pedidos obtenida del ViewModel
     val pedidos by pedidoViewModel.pedidos.collectAsState()
+
+    // Carga todos los pedidos al iniciar la pantalla
     LaunchedEffect(Unit) {
         pedidoViewModel.cargarTodosPedidos()
     }
+
+    // Estructura principal de la pantalla
     Scaffold(
         topBar = {
+
+            // Barra superior con botón de regreso
             TopAppBar(
                 title = { Text("Todos los Pedidos") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 }
             )
         }
     ) { paddingValues ->
+
+        // Si no hay pedidos, se muestra un mensaje
         if (pedidos.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -1035,7 +1443,10 @@ fun PedidosAdminScreen(
             ) {
                 Text("No hay pedidos registrados")
             }
+
         } else {
+
+            // Lista de pedidos
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1043,11 +1454,15 @@ fun PedidosAdminScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 items(pedidos) { pedido ->
                     PedidoAdminCard(
                         pedido = pedido,
                         onUpdateEstado = { nuevoEstado ->
-                            pedidoViewModel.actualizarEstado(pedido.id, nuevoEstado)
+                            pedidoViewModel.actualizarEstado(
+                                pedido.id,
+                                nuevoEstado
+                            )
                         }
                     )
                 }
@@ -1056,21 +1471,37 @@ fun PedidosAdminScreen(
     }
 }
 
+/**
+ * Tarjeta que muestra la información de un pedido
+ * y permite actualizar su estado
+ */
 @Composable
 fun PedidoAdminCard(
-    pedido: Pedido,
-    onUpdateEstado: (String) -> Unit
+    pedido: Pedido,                     // Pedido a mostrar
+    onUpdateEstado: (String) -> Unit     // Acción para cambiar el estado
 ) {
-    val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
+    // Formato de fecha y hora
+    val dateFormat =
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
     val fechaStr = dateFormat.format(pedido.fecha.toDate())
+
+    // Estado para mostrar u ocultar los detalles
     var expanded by remember { mutableStateOf(false) }
+
+    // Estado para mostrar el diálogo de cambio de estado
     var showEstadoDialog by remember { mutableStateOf(false) }
+
+    // Color según el estado del pedido
     val estadoColor = when (pedido.estado) {
         "pendiente" -> MaterialTheme.colorScheme.tertiary
         "en_proceso" -> MaterialTheme.colorScheme.primary
         "completado" -> Color(0xFF4CAF50)
         else -> MaterialTheme.colorScheme.error
     }
+
+    // Tarjeta principal del pedido
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1079,11 +1510,18 @@ fun PedidoAdminCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+
+            /* =======================
+               Encabezado del pedido
+               ======================= */
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
+                // Información básica del pedido
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Pedido #${pedido.id.take(8)}",
@@ -1095,17 +1533,24 @@ fun PedidoAdminCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
+
+                // Chip para mostrar y cambiar el estado
                 Surface(
                     color = estadoColor.copy(alpha = 0.2f),
                     shape = MaterialTheme.shapes.small,
                     onClick = { showEstadoDialog = true }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 6.dp
+                        ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = pedido.estado.replace("_", " ").capitalize(Locale.ROOT),
+                            text = pedido.estado
+                                .replace("_", " ")
+                                .capitalize(Locale.ROOT),
                             color = estadoColor,
                             style = MaterialTheme.typography.labelMedium
                         )
@@ -1118,7 +1563,13 @@ fun PedidoAdminCard(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            /* =======================
+               Total del pedido
+               ======================= */
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1130,18 +1581,32 @@ fun PedidoAdminCard(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+
+            /* =======================
+               Botón de detalles
+               ======================= */
+
             TextButton(
                 onClick = { expanded = !expanded },
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text(if (expanded) "Ver menos" else "Ver detalles")
                 Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    if (expanded)
+                        Icons.Default.ExpandLess
+                    else
+                        Icons.Default.ExpandMore,
                     contentDescription = null
                 )
             }
+
+            /* =======================
+               Detalles del pedido
+               ======================= */
+
             if (expanded) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
+
                 pedido.detalles.forEach { detalle ->
                     Row(
                         modifier = Modifier
@@ -1156,6 +1621,11 @@ fun PedidoAdminCard(
             }
         }
     }
+
+    /* =======================
+       Diálogo para cambiar estado
+       ======================= */
+
     if (showEstadoDialog) {
         AlertDialog(
             onDismissRequest = { showEstadoDialog = false },
@@ -1189,6 +1659,7 @@ fun PedidoAdminCard(
         )
     }
 }
+
 ```
 
 screen/admin/ProductosCrudScreen.kt
@@ -1210,26 +1681,45 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Producto
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.ProductoViewModel
 
+/**
+ * Pantalla de administración para realizar
+ * operaciones CRUD sobre los productos
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductosCrudScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateBack: () -> Unit,                     // Regresar a la pantalla anterior
     productoViewModel: ProductoViewModel = viewModel()
 ) {
+
+    // Lista de productos obtenida del ViewModel
     val productos by productoViewModel.productos.collectAsState()
+
+    // Controla la visibilidad del diálogo
     var showDialog by remember { mutableStateOf(false) }
+
+    // Producto seleccionado para editar (null si es nuevo)
     var selectedProducto by remember { mutableStateOf<Producto?>(null) }
+
+    // Estructura base de la pantalla
     Scaffold(
         topBar = {
+
+            // Barra superior con botón de regreso
             TopAppBar(
                 title = { Text("Gestionar Productos") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 }
             )
         },
+
+        // Botón flotante para agregar producto
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -1237,10 +1727,15 @@ fun ProductosCrudScreen(
                     showDialog = true
                 }
             ) {
-                Icon(Icons.Default.Add, "Agregar Producto")
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Agregar Producto"
+                )
             }
         }
     ) { paddingValues ->
+
+        // Lista de productos
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -1248,13 +1743,18 @@ fun ProductosCrudScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
             items(productos) { producto ->
                 ProductoAdminCard(
                     producto = producto,
+
+                    // Editar producto
                     onEdit = {
                         selectedProducto = producto
                         showDialog = true
                     },
+
+                    // Eliminar producto
                     onDelete = {
                         productoViewModel.eliminarProducto(producto.id)
                     }
@@ -1262,29 +1762,44 @@ fun ProductosCrudScreen(
             }
         }
     }
+
+    // Diálogo para agregar o editar producto
     if (showDialog) {
         ProductoDialog(
             producto = selectedProducto,
             onDismiss = { showDialog = false },
             onConfirm = { producto ->
+
+                // Decide si se actualiza o se agrega
                 if (selectedProducto != null) {
-                    productoViewModel.actualizarProducto(selectedProducto!!.id, producto)
+                    productoViewModel.actualizarProducto(
+                        selectedProducto!!.id,
+                        producto
+                    )
                 } else {
                     productoViewModel.agregarProducto(producto, null)
                 }
+
                 showDialog = false
             }
         )
     }
 }
 
+/**
+ * Tarjeta que muestra la información de un producto
+ * con opciones para editar o eliminar
+ */
 @Composable
 fun ProductoAdminCard(
-    producto: Producto,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    producto: Producto,        // Producto a mostrar
+    onEdit: () -> Unit,        // Acción para editar
+    onDelete: () -> Unit       // Acción para eliminar
 ) {
+
+    // Controla el diálogo de confirmación de eliminación
     var showDeleteDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1295,6 +1810,8 @@ fun ProductoAdminCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+
+            // Información del producto
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = producto.nombre,
@@ -1306,27 +1823,46 @@ fun ProductoAdminCard(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = if (producto.disponible) "Disponible" else "No disponible",
+                    text = if (producto.disponible)
+                        "Disponible"
+                    else
+                        "No disponible",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (producto.disponible) Color(0xFF4CAF50)
-                    else MaterialTheme.colorScheme.error
+                    color = if (producto.disponible)
+                        Color(0xFF4CAF50)
+                    else
+                        MaterialTheme.colorScheme.error
                 )
             }
+
+            // Botones de acciones
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
     }
+
+    // Diálogo de confirmación para eliminar producto
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Eliminar Producto") },
-            text = { Text("¿Estás seguro de que quieres eliminar ${producto.nombre}?") },
+            text = {
+                Text("¿Estás seguro de que quieres eliminar ${producto.nombre}?")
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1346,27 +1882,43 @@ fun ProductoAdminCard(
     }
 }
 
+/**
+ * Diálogo reutilizable para agregar o editar un producto
+ */
 @Composable
 fun ProductoDialog(
-    producto: Producto?,
-    onDismiss: () -> Unit,
-    onConfirm: (Producto) -> Unit
+    producto: Producto?,               // Producto a editar (null si es nuevo)
+    onDismiss: () -> Unit,              // Cerrar diálogo
+    onConfirm: (Producto) -> Unit       // Guardar producto
 ) {
+
+    // Estados de los campos
     var nombre by remember { mutableStateOf(producto?.nombre ?: "") }
     var descripcion by remember { mutableStateOf(producto?.descripcion ?: "") }
     var precio by remember { mutableStateOf(producto?.precio?.toString() ?: "") }
     var categoria by remember { mutableStateOf(producto?.categoria ?: "") }
     var disponible by remember { mutableStateOf(producto?.disponible ?: true) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (producto != null) "Editar Producto" else "Nuevo Producto") },
+        title = {
+            Text(
+                if (producto != null)
+                    "Editar Producto"
+                else
+                    "Nuevo Producto"
+            )
+        },
         text = {
+
+            // Contenido del formulario
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
@@ -1374,6 +1926,7 @@ fun ProductoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -1381,6 +1934,7 @@ fun ProductoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
+
                 OutlinedTextField(
                     value = precio,
                     onValueChange = { precio = it },
@@ -1391,6 +1945,7 @@ fun ProductoDialog(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
                     )
                 )
+
                 OutlinedTextField(
                     value = categoria,
                     onValueChange = { categoria = it },
@@ -1398,6 +1953,8 @@ fun ProductoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
+                // Checkbox de disponibilidad
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -1413,7 +1970,11 @@ fun ProductoDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+
+                    // Convierte el precio a Double
                     val precioDouble = precio.toDoubleOrNull() ?: 0.0
+
+                    // Crea el objeto Producto
                     val nuevoProducto = Producto(
                         id = producto?.id ?: "",
                         nombre = nombre,
@@ -1423,6 +1984,7 @@ fun ProductoDialog(
                         categoria = categoria,
                         imagenUrl = producto?.imagenUrl ?: ""
                     )
+
                     onConfirm(nuevoProducto)
                 },
                 enabled = nombre.isNotBlank() && precio.toDoubleOrNull() != null
@@ -1437,6 +1999,7 @@ fun ProductoDialog(
         }
     )
 }
+
 ```
 
 screen/admin/PromocionesScreen.kt
@@ -1460,17 +2023,30 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AdminViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Pantalla para administrar promociones
+ * Permite crear, editar y eliminar promociones
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PromocionesScreen(
-    onNavigateBack: () -> Unit,
+    onNavigateBack: () -> Unit,                 // Regresa a la pantalla anterior
     adminViewModel: AdminViewModel = viewModel()
 ) {
+
+    // Lista de promociones obtenida del ViewModel
     val promociones by adminViewModel.promociones.collectAsState()
+
+    // Controla si se muestra el diálogo
     var showDialog by remember { mutableStateOf(false) }
+
+    // Promoción seleccionada para editar
     var selectedPromocion by remember { mutableStateOf<Promocion?>(null) }
+
     Scaffold(
         topBar = {
+
+            // Barra superior
             TopAppBar(
                 title = { Text("Gestionar Promociones") },
                 navigationIcon = {
@@ -1480,6 +2056,8 @@ fun PromocionesScreen(
                 }
             )
         },
+
+        // Botón flotante para agregar promoción
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -1491,6 +2069,8 @@ fun PromocionesScreen(
             }
         }
     ) { paddingValues ->
+
+        // Mensaje si no hay promociones
         if (promociones.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -1501,6 +2081,8 @@ fun PromocionesScreen(
                 Text("No hay promociones creadas")
             }
         } else {
+
+            // Lista de promociones
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1508,13 +2090,18 @@ fun PromocionesScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 items(promociones) { promocion ->
                     PromocionCard(
                         promocion = promocion,
+
+                        // Editar promoción
                         onEdit = {
                             selectedPromocion = promocion
                             showDialog = true
                         },
+
+                        // Eliminar promoción
                         onDelete = {
                             adminViewModel.eliminarPromocion(promocion.id)
                         }
@@ -1523,30 +2110,46 @@ fun PromocionesScreen(
             }
         }
     }
+
+    // Diálogo para crear o editar promoción
     if (showDialog) {
         PromocionDialog(
             promocion = selectedPromocion,
             onDismiss = { showDialog = false },
             onConfirm = { promocion ->
+
+                // Decide si se actualiza o se agrega
                 if (selectedPromocion != null) {
-                    adminViewModel.actualizarPromocion(selectedPromocion!!.id, promocion)
+                    adminViewModel.actualizarPromocion(
+                        selectedPromocion!!.id,
+                        promocion
+                    )
                 } else {
                     adminViewModel.agregarPromocion(promocion)
                 }
+
                 showDialog = false
             }
         )
     }
 }
 
+/**
+ * Tarjeta que muestra la información de una promoción
+ */
 @Composable
 fun PromocionCard(
-    promocion: Promocion,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    promocion: Promocion,   // Promoción a mostrar
+    onEdit: () -> Unit,     // Acción para editar
+    onDelete: () -> Unit    // Acción para eliminar
 ) {
+
+    // Controla el diálogo de confirmación de eliminación
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // Formato de fecha
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1556,21 +2159,27 @@ fun PromocionCard(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+
+            // Información de la promoción
             Column(modifier = Modifier.weight(1f)) {
+
                 Text(
                     text = promocion.nombre,
                     style = MaterialTheme.typography.titleMedium
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
+
                 Text(
                     text = promocion.descripcion,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+
+                // Puntos requeridos
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.Star,
                         contentDescription = null,
@@ -1584,27 +2193,38 @@ fun PromocionCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+
+                // Rango de fechas
                 Text(
-                    text = "${dateFormat.format(promocion.fecha_inicio.toDate())} - ${dateFormat.format(promocion.fecha_fin.toDate())}",
+                    text = "${dateFormat.format(promocion.fecha_inicio.toDate())} - " +
+                           "${dateFormat.format(promocion.fecha_fin.toDate())}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
+
+            // Botones de acción
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Edit, "Editar",
+                        tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Delete, "Eliminar",
+                        tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
     }
+
+    // Diálogo de confirmación para eliminar
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Eliminar Promoción") },
-            text = { Text("¿Estás seguro de que quieres eliminar ${promocion.nombre}?") },
+            text = {
+                Text("¿Estás seguro de que quieres eliminar ${promocion.nombre}?")
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1624,25 +2244,38 @@ fun PromocionCard(
     }
 }
 
+/**
+ * Diálogo para crear o editar una promoción
+ */
 @Composable
 fun PromocionDialog(
-    promocion: Promocion?,
+    promocion: Promocion?,            // Promoción a editar (null si es nueva)
     onDismiss: () -> Unit,
     onConfirm: (Promocion) -> Unit
 ) {
+
+    // Estados de los campos
     var nombre by remember { mutableStateOf(promocion?.nombre ?: "") }
     var descripcion by remember { mutableStateOf(promocion?.descripcion ?: "") }
-    var puntos by remember { mutableStateOf(promocion?.puntos_requeridos?.toString() ?: "") }
+    var puntos by remember {
+        mutableStateOf(promocion?.puntos_requeridos?.toString() ?: "")
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (promocion != null) "Editar Promoción" else "Nueva Promoción") },
+        title = {
+            Text(if (promocion != null) "Editar Promoción" else "Nueva Promoción")
+        },
         text = {
+
+            // Formulario
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
@@ -1650,6 +2283,7 @@ fun PromocionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -1657,6 +2291,7 @@ fun PromocionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
+
                 OutlinedTextField(
                     value = puntos,
                     onValueChange = { puntos = it },
@@ -1672,7 +2307,11 @@ fun PromocionDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+
+                    // Convierte puntos a entero
                     val puntosInt = puntos.toIntOrNull() ?: 0
+
+                    // Crea el objeto Promocion
                     val nuevaPromocion = Promocion(
                         id = promocion?.id ?: "",
                         nombre = nombre,
@@ -1681,6 +2320,7 @@ fun PromocionDialog(
                         fecha_inicio = promocion?.fecha_inicio ?: Timestamp.now(),
                         fecha_fin = promocion?.fecha_fin ?: Timestamp.now()
                     )
+
                     onConfirm(nuevaPromocion)
                 },
                 enabled = nombre.isNotBlank() && puntos.toIntOrNull() != null
@@ -1695,6 +2335,7 @@ fun PromocionDialog(
         }
     )
 }
+
 ```
 
 # screen/auth
@@ -1704,22 +2345,15 @@ screen/auth/LoginScreen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.auth
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -1727,22 +2361,37 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Usuario
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthState
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 
+/**
+ * Pantalla de inicio de sesión
+ * Permite al usuario autenticarse con correo y contraseña
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onNavigateToRegister: () -> Unit,
-    onLoginSuccess: (Usuario) -> Unit,
+    onNavigateToRegister: () -> Unit,        // Navega a registro
+    onLoginSuccess: (Usuario) -> Unit,       // Se ejecuta cuando el login es exitoso
     authViewModel: AuthViewModel = viewModel()
 ) {
+
+    // Estados locales de los campos
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    // Controla la visibilidad de la contraseña
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // Estado de autenticación desde el ViewModel
     val authState by authViewModel.authState.collectAsState()
+
+    // Detecta cuando el usuario ya fue autenticado
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
-            onLoginSuccess((authState as AuthState.Authenticated).usuario)
+            onLoginSuccess(
+                (authState as AuthState.Authenticated).usuario
+            )
         }
     }
+
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
@@ -1752,55 +2401,85 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+
             Spacer(modifier = Modifier.height(32.dp))
+
+            // Título
             Text(
                 text = "Cafetería Universitaria",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Subtítulo
             Text(
                 text = "Bienvenido de vuelta",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
+
             Spacer(modifier = Modifier.height(32.dp))
-            // Email Field
+
+            /* ---------- Campo Email ---------- */
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Correo electrónico") },
                 leadingIcon = { Icon(Icons.Default.Email, null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(16.dp))
-            // Password Field
+
+            /* ---------- Campo Contraseña ---------- */
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, null) },
+
+                // Icono para mostrar u ocultar contraseña
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible }
+                    ) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility
-                            else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Ocultar contraseña"
-                            else "Mostrar contraseña"
+                            imageVector = if (passwordVisible)
+                                Icons.Default.Visibility
+                            else
+                                Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible)
+                                "Ocultar contraseña"
+                            else
+                                "Mostrar contraseña"
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+
+                // Control de visibilidad
+                visualTransformation =
+                    if (passwordVisible)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(24.dp))
-            // Login Button
+
+            /* ---------- Botón Iniciar Sesión ---------- */
             Button(
                 onClick = {
                     if (email.isNotBlank() && password.isNotBlank()) {
@@ -1812,21 +2491,29 @@ fun LoginScreen(
                     .height(50.dp),
                 enabled = authState !is AuthState.Loading
             ) {
+
+                // Indicador de carga
                 if (authState is AuthState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Iniciar Sesión", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Iniciar Sesión",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
-            // Register Link
+
+            /* ---------- Enlace a registro ---------- */
             TextButton(onClick = onNavigateToRegister) {
                 Text("¿No tienes cuenta? Regístrate")
             }
-            // Error Message
+
+            /* ---------- Mensaje de error ---------- */
             if (authState is AuthState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -1839,6 +2526,7 @@ fun LoginScreen(
         }
     }
 }
+
 ```
 
 screen/auth/RegistrerScreen.kt
@@ -1855,35 +2543,48 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthState
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 
+/**
+ * Pantalla de registro de usuarios
+ * Permite crear una cuenta nueva con datos básicos
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    onNavigateToLogin: () -> Unit,
-    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit,   // Regresa al login
+    onRegisterSuccess: () -> Unit,   // Se ejecuta al registrarse correctamente
     authViewModel: AuthViewModel = viewModel()
 ) {
+
+    /* ---------- Estados de los campos ---------- */
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+
+    /* ---------- Control de visibilidad ---------- */
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+
+    // Estado de autenticación
     val authState by authViewModel.authState.collectAsState()
+
+    // Scroll para pantallas pequeñas
     val scrollState = rememberScrollState()
+
+    // Detecta cuando el registro fue exitoso
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
             onRegisterSuccess()
         }
     }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1896,6 +2597,7 @@ fun RegisterScreen(
             )
         }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1904,13 +2606,18 @@ fun RegisterScreen(
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Spacer(modifier = Modifier.height(24.dp))
+
             Text(
                 text = "Únete a nosotros",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
+
             Spacer(modifier = Modifier.height(24.dp))
+
+            /* ---------- Nombre ---------- */
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -1919,70 +2626,111 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            /* ---------- Email ---------- */
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Correo electrónico") },
                 leadingIcon = { Icon(Icons.Default.Email, null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            /* ---------- Teléfono ---------- */
             OutlinedTextField(
                 value = telefono,
                 onValueChange = { telefono = it },
                 label = { Text("Teléfono") },
                 leadingIcon = { Icon(Icons.Default.Phone, null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            /* ---------- Contraseña ---------- */
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, null) },
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible }
+                    ) {
                         Icon(
-                            imageVector = if (passwordVisible) Icons.Default.Visibility
-                            else Icons.Default.VisibilityOff,
+                            imageVector = if (passwordVisible)
+                                Icons.Default.Visibility
+                            else
+                                Icons.Default.VisibilityOff,
                             contentDescription = null
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation =
+                    if (passwordVisible)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            /* ---------- Confirmar contraseña ---------- */
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
                 label = { Text("Confirmar contraseña") },
                 leadingIcon = { Icon(Icons.Default.Lock, null) },
                 trailingIcon = {
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    IconButton(
+                        onClick = { confirmPasswordVisible = !confirmPasswordVisible }
+                    ) {
                         Icon(
-                            imageVector = if (confirmPasswordVisible) Icons.Default.Visibility
-                            else Icons.Default.VisibilityOff,
+                            imageVector = if (confirmPasswordVisible)
+                                Icons.Default.Visibility
+                            else
+                                Icons.Default.VisibilityOff,
                             contentDescription = null
                         )
                     }
                 },
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation =
+                    if (confirmPasswordVisible)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                isError = confirmPassword.isNotEmpty() && password != confirmPassword
+
+                // Marca error si no coinciden
+                isError = confirmPassword.isNotEmpty() &&
+                        password != confirmPassword
             )
-            if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+
+            // Mensaje de error de contraseña
+            if (confirmPassword.isNotEmpty() &&
+                password != confirmPassword
+            ) {
                 Text(
                     text = "Las contraseñas no coinciden",
                     color = MaterialTheme.colorScheme.error,
@@ -1990,32 +2738,45 @@ fun RegisterScreen(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp)
                 )
             }
+
             Spacer(modifier = Modifier.height(24.dp))
+
+            /* ---------- Botón Registrar ---------- */
             Button(
                 onClick = {
-                    if (nombre.isNotBlank() && email.isNotBlank() &&
-                        telefono.isNotBlank() && password.isNotBlank() &&
-                        password == confirmPassword) {
-                        authViewModel.register(email, password, nombre, telefono, "")
-                    }
+                    authViewModel.register(
+                        email,
+                        password,
+                        nombre,
+                        telefono,
+                        ""
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 enabled = authState !is AuthState.Loading &&
-                        nombre.isNotBlank() && email.isNotBlank() &&
-                        telefono.isNotBlank() && password.isNotBlank() &&
+                        nombre.isNotBlank() &&
+                        email.isNotBlank() &&
+                        telefono.isNotBlank() &&
+                        password.isNotBlank() &&
                         password == confirmPassword
             ) {
+
                 if (authState is AuthState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Registrarse", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Registrarse",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
+
+            /* ---------- Error general ---------- */
             if (authState is AuthState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -2027,6 +2788,7 @@ fun RegisterScreen(
         }
     }
 }
+
 ```
 
 # Pasamos a las vistas de los usuarios (Clientes)
@@ -2035,6 +2797,7 @@ screen/usuario/CarritoScreen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
+// Imports necesarios para Jetpack Compose y Material 3
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -2049,32 +2812,55 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+// Modelos y ViewModels usados en la pantalla
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.ItemCarrito
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.PedidoViewModel
 
+// Se habilita Material3 experimental para usar componentes como TopAppBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarritoScreen(
+    // Función para regresar a la pantalla anterior
     onNavigateBack: () -> Unit,
+    // Función que se ejecuta cuando se finaliza la compra
     onFinalizarCompra: () -> Unit,
+    // ViewModel del carrito (se recibe por parámetro)
     carritoViewModel: CarritoViewModel,
+    // ViewModel del pedido
     pedidoViewModel: PedidoViewModel = viewModel(),
+    // ViewModel de autenticación
     authViewModel: AuthViewModel = viewModel()
 ) {
+    // Lista de productos del carrito observada como estado
     val items by carritoViewModel.items.collectAsState()
+
+    // Total del carrito
     val total = carritoViewModel.total
+
+    // Estado que indica si el pedido ya fue creado
     val pedidoCreado by pedidoViewModel.pedidoCreado.collectAsState()
+
+    // Usuario autenticado actualmente
     val currentUser by authViewModel.currentUser.collectAsState()
+
+    // Efecto que se ejecuta cuando cambia el estado de pedidoCreado
     LaunchedEffect(pedidoCreado) {
         if (pedidoCreado) {
+            // Limpia el carrito después de crear el pedido
             carritoViewModel.limpiarCarrito()
+            // Resetea el estado del pedido
             pedidoViewModel.resetPedidoCreado()
+            // Navega a la siguiente pantalla
             onFinalizarCompra()
         }
     }
+
+    // Estructura principal de la pantalla
     Scaffold(
+        // Barra superior
         topBar = {
             TopAppBar(
                 title = { Text("Mi Carrito") },
@@ -2085,7 +2871,9 @@ fun CarritoScreen(
                 }
             )
         },
+        // Barra inferior con el total y el botón de compra
         bottomBar = {
+            // Solo se muestra si hay productos en el carrito
             if (items.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -2096,6 +2884,7 @@ fun CarritoScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
+                        // Fila que muestra el total
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -2107,9 +2896,13 @@ fun CarritoScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        // Botón para realizar el pedido
                         Button(
                             onClick = {
+                                // Solo se crea el pedido si hay un usuario autenticado
                                 currentUser?.let { user ->
                                     pedidoViewModel.crearPedido(user.id, items)
                                 }
@@ -2125,6 +2918,8 @@ fun CarritoScreen(
             }
         }
     ) { paddingValues ->
+
+        // Vista cuando el carrito está vacío
         if (items.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -2144,6 +2939,7 @@ fun CarritoScreen(
                 }
             }
         } else {
+            // Lista de productos del carrito
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -2152,11 +2948,14 @@ fun CarritoScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(items) { item ->
+                    // Tarjeta individual por producto
                     CarritoItemCard(
                         item = item,
+                        // Actualiza la cantidad del producto
                         onUpdateCantidad = { cantidad ->
                             carritoViewModel.actualizarCantidad(item.producto.id, cantidad)
                         },
+                        // Elimina el producto del carrito
                         onEliminar = {
                             carritoViewModel.eliminarProducto(item.producto.id)
                         }
@@ -2167,6 +2966,7 @@ fun CarritoScreen(
     }
 }
 
+// Composable que representa un producto dentro del carrito
 @Composable
 fun CarritoItemCard(
     item: ItemCarrito,
@@ -2183,6 +2983,8 @@ fun CarritoItemCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+
+            // Información del producto
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.producto.nombre,
@@ -2193,7 +2995,10 @@ fun CarritoItemCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Controles para modificar la cantidad
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { onUpdateCantidad(item.cantidad - 1) },
@@ -2201,15 +3006,19 @@ fun CarritoItemCard(
                     ) {
                         Icon(Icons.Default.Remove, "Disminuir")
                     }
+
                     Text(
                         text = item.cantidad.toString(),
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
+
                     IconButton(onClick = { onUpdateCantidad(item.cantidad + 1) }) {
                         Icon(Icons.Default.Add, "Aumentar")
                     }
                 }
             }
+
+            // Subtotal y botón eliminar
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "$${String.format("%.2f", item.subtotal)}",
@@ -2227,58 +3036,91 @@ fun CarritoItemCard(
         }
     }
 }
+
 ```
 
 screen/usuario/HomeScreen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
+// Imports necesarios para layouts, listas y grids en Compose
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+
+// Icons de Material
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
+
+// Componentes Material 3
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+// Componentes personalizados
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components.ProductoCard
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components.PromocionesCard
+
+// ViewModels usados en esta pantalla
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AdminViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.ProductoViewModel
 
+// Se habilita Material3 experimental para usar TopAppBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    // Navega al detalle de un producto usando su ID
     onNavigateToProducto: (String) -> Unit,
+    // Navega a la pantalla del carrito
     onNavigateToCarrito: () -> Unit,
+    // Navega a la pantalla de pedidos
     onNavigateToPedidos: () -> Unit,
+    // Navega al perfil del usuario
     onNavigateToPerfil: () -> Unit,
+    // ViewModel de productos
     productoViewModel: ProductoViewModel = viewModel(),
+    // ViewModel del carrito (se recibe por parámetro)
     carritoViewModel: CarritoViewModel,
+    // ViewModel del administrador (promociones)
     adminViewModel: AdminViewModel = viewModel()
 ) {
+
+    // Lista de promociones obtenidas del AdminViewModel
     val promociones by adminViewModel.promociones.collectAsState()
+
+    // Lista de productos obtenida del ProductoViewModel
     val productos by productoViewModel.productos.collectAsState()
+
+    // Estado de carga de productos
     val isLoading by productoViewModel.isLoading.collectAsState()
+
+    // Cantidad total de productos en el carrito
     val cantidadCarrito by carritoViewModel.cantidadItems.collectAsState()
+
+    // Estructura principal de la pantalla
     Scaffold(
+        // Barra superior
         topBar = {
             TopAppBar(
                 title = { Text("Cafetería Universitaria") },
                 actions = {
+
+                    // Ícono del carrito con badge para mostrar la cantidad
                     BadgedBox(
                         badge = {
                             if (cantidadCarrito > 0) {
-                                Badge { Text(cantidadCarrito.toString()) }
+                                Badge {
+                                    Text(cantidadCarrito.toString())
+                                }
                             }
                         }
                     ) {
@@ -2286,9 +3128,13 @@ fun HomeScreen(
                             Icon(Icons.Default.ShoppingCart, "Carrito")
                         }
                     }
+
+                    // Botón para ir a pedidos
                     IconButton(onClick = onNavigateToPedidos) {
                         Icon(Icons.Default.ListAlt, "Pedidos")
                     }
+
+                    // Botón para ir al perfil
                     IconButton(onClick = onNavigateToPerfil) {
                         Icon(Icons.Default.Person, "Perfil")
                     }
@@ -2296,6 +3142,8 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
+
+        // Mientras cargan los productos se muestra un indicador
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -2306,6 +3154,8 @@ fun HomeScreen(
                 CircularProgressIndicator()
             }
         } else {
+
+            // Grid de productos (2 columnas)
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
@@ -2315,6 +3165,8 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
+                // Sección de promociones (ocupa todo el ancho)
                 if (promociones.isNotEmpty()) {
                     item(span = { GridItemSpan(2) }) {
                         Column(
@@ -2324,16 +3176,24 @@ fun HomeScreen(
                                 text = "Promociones",
                                 style = MaterialTheme.typography.titleLarge
                             )
+
+                            // Se recorren y muestran las promociones
                             promociones.forEach { promo ->
                                 PromocionesCard(promocion = promo)
                             }
                         }
                     }
                 }
+
+                // Lista de productos disponibles
                 items(productos.filter { it.disponible }) { producto ->
                     ProductoCard(
                         producto = producto,
-                        onClick = { onNavigateToProducto(producto.id) },
+                        // Navega al detalle del producto
+                        onClick = {
+                            onNavigateToProducto(producto.id)
+                        },
+                        // Agrega el producto al carrito
                         onAddToCart = {
                             carritoViewModel.agregarProducto(producto)
                         }
@@ -2343,17 +3203,23 @@ fun HomeScreen(
         }
     }
 }
+
 ```
 
 screen/usuario/PedidosScreen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
+// Imports para layouts y listas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+
+// Icons de Material
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
+// Componentes Material 3
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -2362,26 +3228,41 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+// Firebase Auth para obtener el usuario actual
 import com.google.firebase.auth.FirebaseAuth
+
+// Modelo y ViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Pedido
-import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.PedidoViewModel
+
+// Utilidades para manejo de fechas
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PedidosScreen(
+    // Navega a la pantalla anterior
     onNavigateBack: () -> Unit,
+    // ViewModel de pedidos
     pedidoViewModel: PedidoViewModel = viewModel()
 ) {
+
+    // Lista de pedidos observada como estado
     val pedidos by pedidoViewModel.pedidos.collectAsState()
+
+    // UID del usuario autenticado en Firebase
     val uid = FirebaseAuth.getInstance().currentUser?.uid
+
+    // Efecto que carga los pedidos del usuario cuando el UID cambia
     LaunchedEffect(uid) {
         if (uid != null) {
             pedidoViewModel.cargarPedidosUsuario(uid)
         }
     }
+
+    // Estructura principal de la pantalla
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2394,14 +3275,26 @@ fun PedidosScreen(
             )
         }
     ) { padding ->
+
+        // Caso: usuario no autenticado
         if (uid == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("Usuario no autenticado")
             }
+
+        // Caso: usuario autenticado pero sin pedidos
         } else if (pedidos.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("No tienes pedidos")
             }
+
+        // Caso: se muestran los pedidos del usuario
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -2410,6 +3303,7 @@ fun PedidosScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Se recorre la lista de pedidos
                 items(pedidos) { pedido ->
                     PedidoCard(pedido)
                 }
@@ -2418,13 +3312,16 @@ fun PedidosScreen(
     }
 }
 
-
-
+// Composable que representa una tarjeta individual de pedido
 @Composable
 fun PedidoCard(pedido: Pedido) {
+
+    // Formato para mostrar la fecha del pedido
     val dateFormat = remember {
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     }
+
+    // Conversión segura de la fecha del pedido a texto
     val fechaStr = try {
         when (val f = pedido.fecha) {
             is com.google.firebase.Timestamp -> dateFormat.format(f.toDate())
@@ -2434,11 +3331,15 @@ fun PedidoCard(pedido: Pedido) {
     } catch (e: Exception) {
         "Fecha no disponible"
     }
+
+    // Se toma solo una parte del ID del pedido para mostrarlo
     val pedidoId = try {
         pedido.id.takeIf { it.length >= 8 }?.take(8) ?: "--------"
     } catch (e: Exception) {
         "--------"
     }
+
+    // Texto y color según el estado del pedido
     val (estadoTexto, estadoColor) = when (pedido.estado) {
         "pendiente" -> "Pendiente" to MaterialTheme.colorScheme.tertiary
         "en_proceso" -> "En Proceso" to MaterialTheme.colorScheme.primary
@@ -2446,13 +3347,22 @@ fun PedidoCard(pedido: Pedido) {
         "cancelado" -> "Cancelado" to MaterialTheme.colorScheme.error
         else -> "Desconocido" to MaterialTheme.colorScheme.outline
     }
+
+    // Tarjeta que muestra la información del pedido
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
+
+            // Encabezado del pedido (ID y estado)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Pedido #$pedidoId", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Pedido #$pedidoId",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                // Etiqueta del estado del pedido
                 Surface(
                     color = estadoColor.copy(alpha = 0.15f),
                     shape = MaterialTheme.shapes.small
@@ -2464,9 +3374,15 @@ fun PedidoCard(pedido: Pedido) {
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Fecha del pedido
             Text(fechaStr, style = MaterialTheme.typography.bodySmall)
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Lista de productos del pedido
             if (pedido.detalles.isNullOrEmpty()) {
                 Text("Sin productos")
             } else {
@@ -2480,7 +3396,10 @@ fun PedidoCard(pedido: Pedido) {
                     }
                 }
             }
+
             Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Total del pedido
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -2495,12 +3414,14 @@ fun PedidoCard(pedido: Pedido) {
         }
     }
 }
+
 ```
 
 screen/usuario/PerfilScreen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
+// Imports para layouts y componentes de Material
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -2510,17 +3431,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+// ViewModel de autenticación
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.AuthViewModel
 
+// Se habilita Material3 experimental para usar TopAppBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(
+    // Navega a la pantalla anterior
     onNavigateBack: () -> Unit,
+    // Cierra la sesión del usuario
     onLogout: () -> Unit,
+    // ViewModel de autenticación
     authViewModel: AuthViewModel = viewModel()
 ) {
+
+    // Usuario actualmente autenticado
     val currentUser by authViewModel.currentUser.collectAsState()
+
+    // Estructura principal de la pantalla
     Scaffold(
+        // Barra superior
         topBar = {
             TopAppBar(
                 title = { Text("Mi Perfil") },
@@ -2532,12 +3464,16 @@ fun PerfilScreen(
             )
         }
     ) { paddingValues ->
+
+        // Contenedor principal en columna
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+
+            // Tarjeta con información principal del usuario
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -2547,17 +3483,24 @@ fun PerfilScreen(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+
+                    // Ícono del perfil
                     Icon(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Perfil",
                         modifier = Modifier.size(80.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
+
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    // Nombre del usuario
                     Text(
                         text = currentUser?.nombre ?: "Usuario",
                         style = MaterialTheme.typography.headlineSmall
                     )
+
+                    // Correo del usuario
                     Text(
                         text = currentUser?.correo ?: "",
                         style = MaterialTheme.typography.bodyMedium,
@@ -2565,7 +3508,10 @@ fun PerfilScreen(
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Tarjeta con información adicional del perfil
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -2574,13 +3520,17 @@ fun PerfilScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
+
+                    // Fila con el teléfono del usuario
                     ProfileInfoRow(
                         icon = Icons.Default.Phone,
                         label = "Teléfono",
                         value = currentUser?.telefono ?: "-"
                     )
+
                     Divider(modifier = Modifier.padding(vertical = 12.dp))
-                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+
+                    // Fila con el rol del usuario
                     ProfileInfoRow(
                         icon = Icons.Default.AdminPanelSettings,
                         label = "Rol",
@@ -2588,7 +3538,11 @@ fun PerfilScreen(
                     )
                 }
             }
+
+            // Espacio flexible para empujar el botón hacia abajo
             Spacer(modifier = Modifier.weight(1f))
+
+            // Botón para cerrar sesión
             Button(
                 onClick = onLogout,
                 modifier = Modifier
@@ -2606,22 +3560,31 @@ fun PerfilScreen(
     }
 }
 
+// Composable reutilizable para mostrar una fila de información del perfil
 @Composable
 fun ProfileInfoRow(
+    // Ícono que representa el tipo de información
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    // Etiqueta del dato (ej. Teléfono, Rol)
     label: String,
+    // Valor del dato
     value: String
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+
+        // Ícono del dato
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = MaterialTheme.colorScheme.primary
         )
+
         Spacer(modifier = Modifier.width(16.dp))
+
+        // Texto descriptivo del dato
         Column {
             Text(
                 text = label,
@@ -2635,12 +3598,14 @@ fun ProfileInfoRow(
         }
     }
 }
+
 ```
 
 screen/usuario/ProductoDetalleScreen.kt
 ```
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
+// Imports para layouts, íconos y Material 3
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -2653,24 +3618,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+// ViewModels usados
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.CarritoViewModel
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel.ProductoViewModel
 
+// Se habilita Material3 experimental para usar TopAppBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductoDetalleScreen(
+    // ID del producto seleccionado
     productoId: String,
+    // Navega a la pantalla anterior
     onNavigateBack: () -> Unit,
+    // ViewModel de productos
     productoViewModel: ProductoViewModel = viewModel(),
+    // ViewModel del carrito (se recibe por parámetro)
     carritoViewModel: CarritoViewModel
 ) {
+
+    // Cantidad seleccionada por el usuario
     var cantidad by remember { mutableStateOf(1) }
+
+    // Estado para mostrar el mensaje de producto agregado
     var productoAgregado by remember { mutableStateOf(false) }
+
+    // Efecto que se ejecuta cuando cambia el ID del producto
     LaunchedEffect(productoId) {
-        // Aquí podrías cargar detalles específicos del producto si es necesario
+        // Aquí se podrían cargar detalles específicos del producto si fuera necesario
     }
+
+    // Lista de productos observada como estado
     val productos by productoViewModel.productos.collectAsState()
+
+    // Se busca el producto seleccionado por su ID
     val producto = productos.find { it.id == productoId }
+
+    // Estructura principal de la pantalla
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2683,6 +3667,8 @@ fun ProductoDetalleScreen(
             )
         }
     ) { paddingValues ->
+
+        // Solo se muestra el contenido si el producto existe
         if (producto != null) {
             Column(
                 modifier = Modifier
@@ -2690,54 +3676,83 @@ fun ProductoDetalleScreen(
                     .padding(paddingValues)
                     .padding(16.dp)
             ) {
-                /*AsyncImage(
+
+                // Imagen del producto (comentada por ahora)
+                /*
+                AsyncImage(
                     model = producto.imagenUrl.ifEmpty { "https://via.placeholder.com/400" },
                     contentDescription = producto.nombre,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(300.dp),
                     contentScale = ContentScale.Crop
-                )*/
+                )
+                */
+
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Nombre del producto
                 Text(
                     text = producto.nombre,
                     style = MaterialTheme.typography.headlineMedium
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Precio del producto
                 Text(
                     text = "$${producto.precio}",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Descripción del producto
                 Text(
                     text = producto.descripcion,
                     style = MaterialTheme.typography.bodyLarge
                 )
+
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Selector de cantidad
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Cantidad:", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Cantidad:",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Botón para disminuir la cantidad
                         IconButton(onClick = { if (cantidad > 1) cantidad-- }) {
                             Icon(Icons.Default.Remove, "Disminuir")
                         }
+
+                        // Cantidad seleccionada
                         Text(
                             text = cantidad.toString(),
                             style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
+
+                        // Botón para aumentar la cantidad
                         IconButton(onClick = { cantidad++ }) {
                             Icon(Icons.Default.Add, "Aumentar")
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Botón para agregar el producto al carrito
                 Button(
                     onClick = {
+                        // Se agrega el producto al carrito según la cantidad seleccionada
                         repeat(cantidad) {
                             carritoViewModel.agregarProducto(producto)
                         }
@@ -2749,6 +3764,8 @@ fun ProductoDetalleScreen(
                 ) {
                     Text("Agregar al Carrito - $${producto.precio * cantidad}")
                 }
+
+                // Mensaje de confirmación cuando el producto se agrega
                 if (productoAgregado) {
                     Snackbar(
                         modifier = Modifier.padding(top = 16.dp)
@@ -2760,34 +3777,49 @@ fun ProductoDetalleScreen(
         }
     }
 }
+
 ```
 
 # Pasamos a los temas y colores de la app
 theme/Color.kt
 ```
+// Paquete donde se definen los colores del tema de la aplicación
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
+// Import necesario para usar colores en Jetpack Compose
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Colores base generados por el template de Material (modo claro/oscuro)
+val Purple80 = Color(0xFFD0BCFF)        // Morado claro (modo oscuro)
+val PurpleGrey80 = Color(0xFFCCC2DC)   // Gris morado claro
+val Pink80 = Color(0xFFEFB8C8)         // Rosa claro
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
-// Colores personalizados para cafetería
-val CoffeeLight = Color(0xFF8B4513)
-val CoffeeDark = Color(0xFF5D2E0F)
-val CoffeeAccent = Color(0xFFD2691E)
-val CreamLight = Color(0xFFFFF8DC)
-val CreamDark = Color(0xFFFFE4B5)
+val Purple40 = Color(0xFF6650a4)       // Morado principal (modo claro)
+val PurpleGrey40 = Color(0xFF625b71)   // Gris morado oscuro
+val Pink40 = Color(0xFF7D5260)         // Rosa oscuro
+
+// -----------------------------
+// Colores personalizados para la cafetería
+// -----------------------------
+
+val CoffeeLight = Color(0xFF8B4513)     // Café claro, ideal para botones o acentos
+val CoffeeDark = Color(0xFF5D2E0F)      // Café oscuro, útil para fondos o headers
+val CoffeeAccent = Color(0xFFD2691E)    // Café anaranjado, para resaltar elementos
+val CreamLight = Color(0xFFFFF8DC)      // Color crema claro, fondo suave
+val CreamDark = Color(0xFFFFE4B5)       // Crema oscuro, variación para contraste
+
 ```
 
 theme/Theme.kt
 ```
+/****************************************************
+ * Paquete donde se define el tema general de la app *
+ ****************************************************/
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
+/****************************************************
+ * Imports necesarios para el manejo del tema       *
+ ****************************************************/
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -2804,90 +3836,143 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+/****************************************************
+ * Esquema de colores para el modo oscuro            *
+ ****************************************************/
 private val DarkColorScheme = darkColorScheme(
-    primary = CoffeeAccent,
-    secondary = CoffeeDark,
-    tertiary = Pink80,
-    background = Color(0xFF1C1B1F),
-    surface = Color(0xFF2C2B2F)
+    primary = CoffeeAccent,        // Color principal
+    secondary = CoffeeDark,         // Color secundario
+    tertiary = Pink80,              // Color terciario
+    background = Color(0xFF1C1B1F), // Fondo principal
+    surface = Color(0xFF2C2B2F)     // Superficies (cards, dialogs)
 )
 
+/****************************************************
+ * Esquema de colores para el modo claro             *
+ ****************************************************/
 private val LightColorScheme = lightColorScheme(
-    primary = CoffeeLight,
-    secondary = CoffeeAccent,
-    tertiary = Pink40,
-    background = CreamLight,
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F)
+    primary = CoffeeLight,          // Color principal
+    secondary = CoffeeAccent,        // Color secundario
+    tertiary = Pink40,               // Color terciario
+    background = CreamLight,         // Fondo claro
+    surface = Color(0xFFFFFBFE),     // Superficie clara
+    onPrimary = Color.White,         // Texto sobre primary
+    onSecondary = Color.White,       // Texto sobre secondary
+    onTertiary = Color.White,        // Texto sobre tertiary
+    onBackground = Color(0xFF1C1B1F),// Texto sobre background
+    onSurface = Color(0xFF1C1B1F)    // Texto sobre surface
 )
 
+/****************************************************
+ * Tema principal de la aplicación                   *
+ ****************************************************/
 @Composable
 fun CafeteriaUniversitariaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
-    content: @Composable () -> Unit
+    darkTheme: Boolean = isSystemInDarkTheme(), // Detecta modo oscuro del sistema
+    dynamicColor: Boolean = false,              // Colores dinámicos (Android 12+)
+    content: @Composable () -> Unit             // Contenido de la app
 ) {
+
+    /************************************************
+     * Selección del esquema de colores             *
+     ************************************************/
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme)
+                dynamicDarkColorScheme(context)
+            else
+                dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+
+    /************************************************
+     * Configuración de la barra de estado           *
+     ************************************************/
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+
+            // Cambia el color de la status bar
             window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+
+            // Define el color de los íconos de la status bar
+            WindowCompat
+                .getInsetsController(window, view)
+                .isAppearanceLightStatusBars = !darkTheme
         }
     }
+
+    /************************************************
+     * Aplicación del tema Material 3               *
+     ************************************************/
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        colorScheme = colorScheme, // Esquema de colores
+        typography = Typography,   // Tipografía definida
+        content = content          // Contenido de la aplicación
     )
 }
+
 ```
 
 theme/Type.kt
 ```
+/****************************************************
+ * Paquete donde se define la tipografía de la app   *
+ ****************************************************/
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
+/****************************************************
+ * Imports necesarios para estilos de texto         *
+ ****************************************************/
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
+/****************************************************
+ * Definición de la tipografía general de la app     *
+ ****************************************************/
 val Typography = Typography(
+
+    /************************************************
+     * Estilo para textos largos (descripciones)    *
+     ************************************************/
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
+        fontFamily = FontFamily.Default,   // Fuente por defecto del sistema
+        fontWeight = FontWeight.Normal,    // Grosor normal
+        fontSize = 16.sp,                  // Tamaño de letra
+        lineHeight = 24.sp,                // Altura de línea
+        letterSpacing = 0.5.sp             // Espaciado entre letras
     ),
+
+    /************************************************
+     * Estilo para títulos principales              *
+     ************************************************/
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        fontFamily = FontFamily.Default,   // Fuente por defecto
+        fontWeight = FontWeight.Bold,      // Texto en negritas
+        fontSize = 22.sp,                  // Tamaño de título
+        lineHeight = 28.sp,                // Altura de línea
+        letterSpacing = 0.sp               // Sin espaciado extra
     ),
+
+    /************************************************
+     * Estilo para etiquetas pequeñas               *
+     ************************************************/
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        fontFamily = FontFamily.Default,   // Fuente por defecto
+        fontWeight = FontWeight.Medium,    // Grosor medio
+        fontSize = 11.sp,                  // Tamaño pequeño
+        lineHeight = 16.sp,                // Altura de línea
+        letterSpacing = 0.5.sp             // Espaciado entre letras
     )
 )
+
 ```
 
 # Ahora haremos los ViewModels 
@@ -2895,8 +3980,14 @@ Los viewModel sirven para almacenar y gestionar los datos de la interfaz de usua
 
 viewmodel/AdminViewModel.kt
 ```
+/****************************************************
+ * ViewModel para la administración de promociones  *
+ ****************************************************/
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
+/****************************************************
+ * Imports necesarios para el ViewModel             *
+ ****************************************************/
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Promocion
@@ -2905,13 +3996,37 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/****************************************************
+ * AdminViewModel                                   *
+ * Maneja la lógica de las promociones (CRUD)       *
+ ****************************************************/
 class AdminViewModel : ViewModel() {
+
+    /************************************************
+     * Repositorio que se encarga del acceso a datos *
+     ************************************************/
     private val repository = PromocionRepository()
+
+    /************************************************
+     * StateFlow privado para manejar promociones   *
+     ************************************************/
     private val _promociones = MutableStateFlow<List<Promocion>>(emptyList())
+
+    /************************************************
+     * StateFlow público que observa la UI          *
+     ************************************************/
     val promociones: StateFlow<List<Promocion>> = _promociones
+
+    /************************************************
+     * Bloque init: se ejecuta al crear el ViewModel*
+     ************************************************/
     init {
         cargarPromociones()
     }
+
+    /************************************************
+     * Carga las promociones desde el repositorio   *
+     ************************************************/
     private fun cargarPromociones() {
         viewModelScope.launch {
             repository.getPromociones().collect { promociones ->
@@ -2919,27 +4034,46 @@ class AdminViewModel : ViewModel() {
             }
         }
     }
+
+    /************************************************
+     * Agrega una nueva promoción                   *
+     ************************************************/
     fun agregarPromocion(promocion: Promocion) {
         viewModelScope.launch {
             repository.agregarPromocion(promocion)
         }
     }
+
+    /************************************************
+     * Actualiza una promoción existente            *
+     ************************************************/
     fun actualizarPromocion(id: String, promocion: Promocion) {
         viewModelScope.launch {
             repository.actualizarPromocion(id, promocion)
         }
     }
+
+    /************************************************
+     * Elimina una promoción por su ID              *
+     ************************************************/
     fun eliminarPromocion(id: String) {
         viewModelScope.launch {
             repository.eliminarPromocion(id)
         }
     }
 }
+
 ```
 viewmodel/AuthViewModel.kt
 ```
+/****************************************************
+ * ViewModel encargado de la autenticación de usuarios
+ ****************************************************/
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
+/****************************************************
+ * Imports necesarios para ViewModel y corrutinas
+ ****************************************************/
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Usuario
@@ -2948,15 +4082,39 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/****************************************************
+ * AuthViewModel
+ * Maneja login, registro, logout y estado de sesión
+ ****************************************************/
 class AuthViewModel : ViewModel() {
+
+    /************************************************
+     * Repositorio de autenticación
+     ************************************************/
     private val repository = AuthRepository()
+
+    /************************************************
+     * Estado de autenticación (Idle, Loading, etc.)
+     ************************************************/
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
+
+    /************************************************
+     * Usuario actualmente autenticado
+     ************************************************/
     private val _currentUser = MutableStateFlow<Usuario?>(null)
     val currentUser: StateFlow<Usuario?> = _currentUser
+
+    /************************************************
+     * Se ejecuta al crear el ViewModel
+     ************************************************/
     init {
         checkAuthStatus()
     }
+
+    /************************************************
+     * Verifica si ya hay un usuario autenticado
+     ************************************************/
     private fun checkAuthStatus() {
         val user = repository.currentUser
         if (user != null) {
@@ -2969,9 +4127,14 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
+    /************************************************
+     * Inicia sesión con correo y contraseña
+     ************************************************/
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
+
             val result = repository.login(email, password)
             result.onSuccess { firebaseUser ->
                 val userDataResult = repository.getUserData(firebaseUser.uid)
@@ -2979,34 +4142,54 @@ class AuthViewModel : ViewModel() {
                     _currentUser.value = usuario
                     _authState.value = AuthState.Authenticated(usuario)
                 }.onFailure { error ->
-                    _authState.value = AuthState.Error(error.message ?: "Error desconocido")
+                    _authState.value =
+                        AuthState.Error(error.message ?: "Error desconocido")
                 }
             }.onFailure { error ->
-                _authState.value = AuthState.Error(error.message ?: "Error al iniciar sesión")
+                _authState.value =
+                    AuthState.Error(error.message ?: "Error al iniciar sesión")
             }
         }
     }
-    fun register(email: String, password: String, nombre: String, telefono: String, idUniversidad: String) {
+
+    /************************************************
+     * Registra un nuevo usuario
+     ************************************************/
+    fun register(
+        email: String,
+        password: String,
+        nombre: String,
+        telefono: String,
+        idUniversidad: String
+    ) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
+
             val usuario = Usuario(
                 nombre = nombre,
                 telefono = telefono,
                 id_universidad = idUniversidad,
                 rol = "usuario"
             )
+
             val result = repository.register(email, password, usuario)
             result.onSuccess { firebaseUser ->
                 val userDataResult = repository.getUserData(firebaseUser.uid)
                 userDataResult.onSuccess { usuarioCompleto ->
                     _currentUser.value = usuarioCompleto
-                    _authState.value = AuthState.Authenticated(usuarioCompleto)
+                    _authState.value =
+                        AuthState.Authenticated(usuarioCompleto)
                 }
             }.onFailure { error ->
-                _authState.value = AuthState.Error(error.message ?: "Error al registrarse")
+                _authState.value =
+                    AuthState.Error(error.message ?: "Error al registrarse")
             }
         }
     }
+
+    /************************************************
+     * Cierra la sesión del usuario
+     ************************************************/
     fun logout() {
         repository.logout()
         _currentUser.value = null
@@ -3014,12 +4197,32 @@ class AuthViewModel : ViewModel() {
     }
 }
 
+/****************************************************
+ * Estados posibles de autenticación
+ ****************************************************/
 sealed class AuthState {
+
+    /************************************************
+     * Estado inicial (sin acción)
+     ************************************************/
     object Idle : AuthState()
+
+    /************************************************
+     * Estado de carga
+     ************************************************/
     object Loading : AuthState()
+
+    /************************************************
+     * Usuario autenticado correctamente
+     ************************************************/
     data class Authenticated(val usuario: Usuario) : AuthState()
+
+    /************************************************
+     * Error durante la autenticación
+     ************************************************/
     data class Error(val message: String) : AuthState()
 }
+
 ```
 
 viewmodel/CarritoViewModel.kt
@@ -3032,40 +4235,84 @@ import kotlinx.coroutines.flow.StateFlow
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.ItemCarrito
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Producto
 
+/**
+ * ViewModel encargado de manejar la lógica del carrito de compras.
+ * Controla los productos, cantidades y el total a pagar.
+ */
 class CarritoViewModel : ViewModel() {
+
+    // StateFlow privado que almacena los productos del carrito
     private val _items = MutableStateFlow<List<ItemCarrito>>(emptyList())
+
+    // StateFlow público para observar los productos desde la UI
     val items: StateFlow<List<ItemCarrito>> = _items
+
+    // StateFlow privado que guarda la cantidad total de productos
     private val _cantidadItems = MutableStateFlow(0)
+
+    // StateFlow público para mostrar la cantidad total en la UI
     val cantidadItems: StateFlow<Int> = _cantidadItems
+
+    /**
+     * Calcula el total del carrito sumando los subtotales de cada producto.
+     */
     val total: Double
         get() = _items.value.sumOf { it.subtotal }
+
+    /**
+     * Agrega un producto al carrito.
+     * Si el producto ya existe, aumenta su cantidad.
+     */
     fun agregarProducto(producto: Producto) {
         val itemExistente = _items.value.find { it.producto.id == producto.id }
+
         if (itemExistente != null) {
+            // Aumenta la cantidad del producto existente
             itemExistente.cantidad++
+
+            // Se reasigna la lista para notificar cambios al StateFlow
             _items.value = _items.value.toList()
         } else {
+            // Agrega un nuevo producto al carrito
             _items.value = _items.value + ItemCarrito(producto, 1)
         }
+
+        // Actualiza la cantidad total de productos
         _cantidadItems.value = _items.value.sumOf { it.cantidad }
     }
+
+    /**
+     * Elimina un producto del carrito usando su ID.
+     */
     fun eliminarProducto(productoId: String) {
         _items.value = _items.value.filter { it.producto.id != productoId }
         _cantidadItems.value = _items.value.sumOf { it.cantidad }
     }
+
+    /**
+     * Actualiza la cantidad de un producto específico.
+     */
     fun actualizarCantidad(productoId: String, cantidad: Int) {
         val item = _items.value.find { it.producto.id == productoId }
+
         if (item != null && cantidad > 0) {
             item.cantidad = cantidad
             _items.value = _items.value.toList()
         }
+
+        // Recalcula la cantidad total
         _cantidadItems.value = _items.value.sumOf { it.cantidad }
     }
+
+    /**
+     * Limpia completamente el carrito.
+     */
     fun limpiarCarrito() {
         _items.value = emptyList()
         _cantidadItems.value = 0
     }
 }
+
 ```
 
 viewmodel/PedidoViewModel.kt
@@ -3083,12 +4330,31 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel encargado de manejar la lógica de los pedidos.
+ * Se comunica con el repositorio para crear pedidos,
+ * obtener pedidos y actualizar su estado.
+ */
 class PedidoViewModel : ViewModel() {
+
+    // Repositorio que maneja el acceso a Firebase
     private val repository = PedidoRepository()
+
+    // Lista privada de pedidos (estado mutable)
     private val _pedidos = MutableStateFlow<List<Pedido>>(emptyList())
+
+    // Exposición pública de la lista de pedidos
     val pedidos: StateFlow<List<Pedido>> = _pedidos
-    private val _pedidoCreado = MutableStateFlow<Boolean>(false)
+
+    // Indica si un pedido fue creado correctamente
+    private val _pedidoCreado = MutableStateFlow(false)
+
+    // Exposición pública del estado de creación del pedido
     val pedidoCreado: StateFlow<Boolean> = _pedidoCreado
+
+    /**
+     * Carga los pedidos de un usuario específico.
+     */
     fun cargarPedidosUsuario(userId: String) {
         viewModelScope.launch {
             repository.getPedidosUsuario(userId).collect { pedidos ->
@@ -3096,6 +4362,10 @@ class PedidoViewModel : ViewModel() {
             }
         }
     }
+
+    /**
+     * Carga todos los pedidos (uso administrativo).
+     */
     fun cargarTodosPedidos() {
         viewModelScope.launch {
             repository.getTodosPedidos().collect { pedidos ->
@@ -3103,8 +4373,14 @@ class PedidoViewModel : ViewModel() {
             }
         }
     }
+
+    /**
+     * Crea un nuevo pedido a partir de los productos del carrito.
+     */
     fun crearPedido(userId: String, items: List<ItemCarrito>) {
         viewModelScope.launch {
+
+            // Convierte los items del carrito en detalles del pedido
             val detalles = items.map { item ->
                 DetallePedido(
                     id_producto = item.producto.id,
@@ -3114,6 +4390,8 @@ class PedidoViewModel : ViewModel() {
                     subtotal = item.subtotal
                 )
             }
+
+            // Construye el objeto Pedido
             val pedido = Pedido(
                 id_usuario = userId,
                 fecha = Timestamp.now(),
@@ -3121,21 +4399,35 @@ class PedidoViewModel : ViewModel() {
                 estado = "pendiente",
                 detalles = detalles
             )
+
+            // Envía el pedido al repositorio
             val result = repository.crearPedido(pedido)
+
+            // Si se crea correctamente, se notifica a la UI
             result.onSuccess {
                 _pedidoCreado.value = true
             }
         }
     }
+
+    /**
+     * Actualiza el estado de un pedido (pendiente, preparado, entregado, etc.).
+     */
     fun actualizarEstado(pedidoId: String, nuevoEstado: String) {
         viewModelScope.launch {
             repository.actualizarEstadoPedido(pedidoId, nuevoEstado)
         }
     }
+
+    /**
+     * Reinicia el estado del pedido creado.
+     * Se usa después de mostrar un mensaje de éxito.
+     */
     fun resetPedidoCreado() {
         _pedidoCreado.value = false
     }
 }
+
 ```
 
 viewmodel/ProductoViewModel.kt
@@ -3151,40 +4443,75 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import android.net.Uri
 
+/**
+ * ViewModel encargado de manejar la lógica de los productos.
+ * Obtiene, agrega, actualiza y elimina productos desde el repositorio.
+ */
 class ProductoViewModel : ViewModel() {
+
+    // Repositorio que maneja los datos de productos (Firebase)
     private val repository = ProductoRepository()
+
+    // Lista privada de productos (estado mutable)
     private val _productos = MutableStateFlow<List<Producto>>(emptyList())
+
+    // Exposición pública de la lista de productos para la UI
     val productos: StateFlow<List<Producto>> = _productos
+
+    // Indica si los productos se están cargando
     private val _isLoading = MutableStateFlow(true)
+
+    // Exposición pública del estado de carga
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    // Se ejecuta al crear el ViewModel
     init {
         cargarProductos()
     }
+
+    /**
+     * Carga la lista de productos desde el repositorio.
+     */
     private fun cargarProductos() {
         viewModelScope.launch {
             _isLoading.value = true
+
             repository.getProductos().collect { productos ->
                 _productos.value = productos
                 _isLoading.value = false
             }
         }
     }
+
+    /**
+     * Agrega un nuevo producto.
+     * Puede incluir una imagen opcional.
+     */
     fun agregarProducto(producto: Producto, imagenUri: Uri?) {
         viewModelScope.launch {
             repository.agregarProducto(producto, imagenUri)
         }
     }
+
+    /**
+     * Actualiza un producto existente usando su ID.
+     */
     fun actualizarProducto(id: String, producto: Producto) {
         viewModelScope.launch {
             repository.actualizarProducto(id, producto)
         }
     }
+
+    /**
+     * Elimina un producto usando su ID.
+     */
     fun eliminarProducto(id: String) {
         viewModelScope.launch {
             repository.eliminarProducto(id)
         }
     }
 }
+
 ```
 
 # Finalmente con MainActivity, desde donde se ejecutará y unirá cada complemento
@@ -3201,40 +4528,75 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import android.net.Uri
 
+/**
+ * ViewModel que maneja la lógica de los productos.
+ * Se encarga de obtener, agregar, actualizar y eliminar productos.
+ */
 class ProductoViewModel : ViewModel() {
+
+    // Repositorio que conecta con la fuente de datos (Firebase)
     private val repository = ProductoRepository()
+
+    // Lista privada de productos (estado mutable)
     private val _productos = MutableStateFlow<List<Producto>>(emptyList())
+
+    // Lista pública observable desde la UI
     val productos: StateFlow<List<Producto>> = _productos
+
+    // Indica si los productos se están cargando
     private val _isLoading = MutableStateFlow(true)
+
+    // Estado de carga expuesto a la UI
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    // Se ejecuta cuando se crea el ViewModel
     init {
         cargarProductos()
     }
+
+    /**
+     * Obtiene los productos desde el repositorio.
+     */
     private fun cargarProductos() {
         viewModelScope.launch {
             _isLoading.value = true
+
             repository.getProductos().collect { productos ->
                 _productos.value = productos
                 _isLoading.value = false
             }
         }
     }
+
+    /**
+     * Agrega un nuevo producto.
+     * La imagen es opcional.
+     */
     fun agregarProducto(producto: Producto, imagenUri: Uri?) {
         viewModelScope.launch {
             repository.agregarProducto(producto, imagenUri)
         }
     }
+
+    /**
+     * Actualiza un producto existente usando su ID.
+     */
     fun actualizarProducto(id: String, producto: Producto) {
         viewModelScope.launch {
             repository.actualizarProducto(id, producto)
         }
     }
+
+    /**
+     * Elimina un producto usando su ID.
+     */
     fun eliminarProducto(id: String) {
         viewModelScope.launch {
             repository.eliminarProducto(id)
         }
     }
 }
+
 ```
 
 # EJECUCIÓN
