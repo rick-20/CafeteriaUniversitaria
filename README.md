@@ -23,6 +23,7 @@ https://github.com/user-attachments/assets/20a42fe1-2ceb-436f-b66b-3722197f5a26
 
 # Configuración inicial
 1. Archivo libs.version.toml
+
 [versions]
 agp = "8.13.1"
 kotlin = "2.0.21"
@@ -82,17 +83,16 @@ android {
         version = release(36)
     }
 
-    defaultConfig {
+defaultConfig {
         applicationId = "mx.edu.utng.cafeteria.cafeteriauniversitaria"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "2.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
+buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -114,34 +114,33 @@ android {
 }
 
 dependencies {
-
     Firebase (BoM)
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.analytics)
     implementation("com.google.firebase:firebase-auth")
-
+ /   
     AndroidX / Compose (compatibles con SDK 36)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-
+/
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.firebase.storage.ktx)
-
+/
     Tests
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-
+/
     Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
+/
     // --- Jetpack Compose ---
     implementation(platform("androidx.compose:compose-bom:2024.10.00"))
     implementation("androidx.compose.ui:ui")
@@ -149,29 +148,30 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
-
+/
     // --- Navegación ---
     implementation("androidx.navigation:navigation-compose:2.8.2")
-
+/
     // --- Retrofit para llamadas HTTP ---
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
+/
     // --- Corrutinas ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-
+/
     // --- Serialización JSON ---
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
+/
     // --- Core Android ---
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
-
+/
     //Iconos
     implementation("androidx.compose.material:material-icons-extended:1.3.1")
     testImplementation(kotlin("test"))
 }
+
 Explicación detallada:
 namespace = es el nombre de la app
 compileSdk = 36: La versión de Android que se usa para compilar
@@ -279,9 +279,9 @@ import kotlinx.coroutines.tasks.await
 class AuthRepository {
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
-
+/
     val currentUser: FirebaseUser? get() = auth.currentUser
-
+/
     suspend fun login(email: String, password: String): Result<FirebaseUser> {
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
@@ -290,22 +290,22 @@ class AuthRepository {
             Result.failure(e)
         }
     }
-
+/
     suspend fun register(email: String, password: String, usuario: Usuario): Result<FirebaseUser> {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = result.user!!.uid
-
+/
             // Guardar usuario en Firestore
             val nuevoUsuario = usuario.copy(id = uid, correo = email)
             firestore.collection("usuarios").document(uid).set(nuevoUsuario).await()
-
+/
             Result.success(result.user!!)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-
+/
     suspend fun getUserData(uid: String): Result<Usuario> {
         return try {
             val snapshot = firestore.collection("usuarios").document(uid).get().await()
@@ -319,7 +319,7 @@ class AuthRepository {
             Result.failure(e)
         }
     }
-
+/
     fun logout() {
         auth.signOut()
     }
@@ -338,7 +338,7 @@ import kotlinx.coroutines.tasks.await
 
 class PedidoRepository {
     private val firestore = FirebaseFirestore.getInstance()
-
+/
     fun getPedidosUsuario(userId: String): Flow<List<Pedido>> = callbackFlow {
         val listener = firestore.collection("pedidos")
             .whereEqualTo("id_usuario", userId)
@@ -355,7 +355,7 @@ class PedidoRepository {
             }
         awaitClose { listener.remove() }
     }
-
+/
     fun getTodosPedidos(): Flow<List<Pedido>> = callbackFlow {
         val listener = firestore.collection("pedidos")
             .orderBy("fecha", Query.Direction.DESCENDING)
@@ -371,7 +371,7 @@ class PedidoRepository {
             }
         awaitClose { listener.remove() }
     }
-
+/
     suspend fun crearPedido(pedido: Pedido): Result<String> {
         return try {
             val docRef = firestore.collection("pedidos").add(pedido).await()
@@ -380,7 +380,7 @@ class PedidoRepository {
             Result.failure(e)
         }
     }
-
+/
     suspend fun actualizarEstadoPedido(pedidoId: String, nuevoEstado: String): Result<Unit> {
         return try {
             firestore.collection("pedidos")
@@ -409,7 +409,7 @@ import android.net.Uri
 class ProductoRepository {
     private val firestore = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
-
+/
     fun getProductos(): Flow<List<Producto>> = callbackFlow {
         val listener = firestore.collection("productos")
             .addSnapshotListener { snapshot, error ->
@@ -424,7 +424,7 @@ class ProductoRepository {
             }
         awaitClose { listener.remove() }
     }
-
+/
     suspend fun getProductoById(id: String): Result<Producto> {
         return try {
             val snapshot = firestore.collection("productos").document(id).get().await()
@@ -438,18 +438,17 @@ class ProductoRepository {
             Result.failure(e)
         }
     }
-
+/
     suspend fun agregarProducto(producto: Producto, imagenUri: Uri?): Result<String> {
         return try {
             var imagenUrl = ""
-
-            // Subir imagen si existe
+/
             if (imagenUri != null) {
                 val storageRef = storage.reference.child("productos/${System.currentTimeMillis()}.jpg")
                 storageRef.putFile(imagenUri).await()
                 imagenUrl = storageRef.downloadUrl.await().toString()
             }
-
+/
             val productoConImagen = producto.copy(imagenUrl = imagenUrl)
             val docRef = firestore.collection("productos").add(productoConImagen).await()
             Result.success(docRef.id)
@@ -457,7 +456,6 @@ class ProductoRepository {
             Result.failure(e)
         }
     }
-
     suspend fun actualizarProducto(id: String, producto: Producto): Result<Unit> {
         return try {
             firestore.collection("productos").document(id).set(producto).await()
@@ -466,7 +464,6 @@ class ProductoRepository {
             Result.failure(e)
         }
     }
-
     suspend fun eliminarProducto(id: String): Result<Unit> {
         return try {
             firestore.collection("productos").document(id).delete().await()
@@ -489,7 +486,6 @@ import kotlinx.coroutines.tasks.await
 
 class PromocionRepository {
     private val firestore = FirebaseFirestore.getInstance()
-
     fun getPromociones(): Flow<List<Promocion>> = callbackFlow {
         val listener = firestore.collection("promociones")
             .addSnapshotListener { snapshot, error ->
@@ -504,7 +500,6 @@ class PromocionRepository {
             }
         awaitClose { listener.remove() }
     }
-
     suspend fun agregarPromocion(promocion: Promocion): Result<String> {
         return try {
             val docRef = firestore.collection("promociones").add(promocion).await()
@@ -513,7 +508,6 @@ class PromocionRepository {
             Result.failure(e)
         }
     }
-
     suspend fun actualizarPromocion(id: String, promocion: Promocion): Result<Unit> {
         return try {
             firestore.collection("promociones").document(id).set(promocion).await()
@@ -522,7 +516,6 @@ class PromocionRepository {
             Result.failure(e)
         }
     }
-
     suspend fun eliminarPromocion(id: String): Result<Unit> {
         return try {
             firestore.collection("promociones").document(id).delete().await()
@@ -565,7 +558,6 @@ fun ProductoCard(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -577,9 +569,7 @@ fun ProductoCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -590,7 +580,6 @@ fun ProductoCard(
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
-
                     IconButton(
                         onClick = { onAddToCart() },
                         modifier = Modifier.size(32.dp)
@@ -673,16 +662,13 @@ fun NavGraph(
 ) {
     val authState by authViewModel.authState.collectAsState()
     val currentUser by authViewModel.currentUser.collectAsState()
-
     val startDestination = when (authState) {
         is AuthState.Authenticated -> {
             if (currentUser?.rol == "admin") Screen.AdminHome.route else Screen.Home.route
         }
         else -> Screen.Login.route
     }
-
     val carritoViewModel: CarritoViewModel = viewModel()
-
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -704,7 +690,6 @@ fun NavGraph(
                 }
             )
         }
-
         composable(Screen.Register.route) {
             RegisterScreen(
                 onNavigateToLogin = { navController.popBackStack() },
@@ -715,7 +700,6 @@ fun NavGraph(
                 }
             )
         }
-
         // Usuario Screens
         composable(Screen.Home.route) {
             HomeScreen(
@@ -728,7 +712,6 @@ fun NavGraph(
                 onNavigateToPerfil = { navController.navigate(Screen.Perfil.route) }
             )
         }
-
         composable(
             route = Screen.ProductoDetalle.route,
             arguments = listOf(navArgument("productoId") { type = NavType.StringType })
@@ -740,7 +723,6 @@ fun NavGraph(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
         composable(Screen.Carrito.route) {
             CarritoScreen(
                 carritoViewModel = carritoViewModel,
@@ -748,13 +730,11 @@ fun NavGraph(
                 onFinalizarCompra = { navController.navigate(Screen.Pedidos.route) }
             )
         }
-
         composable(Screen.Pedidos.route) {
             PedidosScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
         composable(Screen.Perfil.route) {
             PerfilScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -766,7 +746,6 @@ fun NavGraph(
                 }
             )
         }
-
         // Admin Screens
         composable(Screen.AdminHome.route) {
             AdminHomeScreen(
@@ -781,19 +760,16 @@ fun NavGraph(
                 }
             )
         }
-
         composable(Screen.ProductosCrud.route) {
             ProductosCrudScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
         composable(Screen.PromocionesAdmin.route) {
             PromocionesScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
         composable(Screen.PedidosAdmin.route) {
             PedidosAdminScreen(
                 onNavigateBack = { navController.popBackStack() }
@@ -815,7 +791,6 @@ sealed class Screen(val route: String) {
     object Carrito : Screen("carrito")
     object Pedidos : Screen("pedidos")
     object Perfil : Screen("perfil")
-
     // Admin
     object AdminHome : Screen("admin/home")
     object ProductosCrud : Screen("admin/productos")
@@ -854,7 +829,6 @@ fun AdminHomeScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val currentUser by authViewModel.currentUser.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -902,9 +876,7 @@ fun AdminHomeScreen(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
-
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -934,15 +906,6 @@ fun AdminHomeScreen(
                         onClick = onNavigateToPedidos
                     )
                 }
-                /*item {
-                    AdminMenuCard(
-                        icon = Icons.Default.BarChart,
-                        title = "Estadísticas",
-                        description = "Próximamente",
-                        onClick = { },
-                        enabled = false
-                    )
-                }*/
             }
         }
     }
@@ -1021,11 +984,9 @@ fun PedidosAdminScreen(
     pedidoViewModel: PedidoViewModel = viewModel()
 ) {
     val pedidos by pedidoViewModel.pedidos.collectAsState()
-
     LaunchedEffect(Unit) {
         pedidoViewModel.cargarTodosPedidos()
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1075,17 +1036,14 @@ fun PedidoAdminCard(
 ) {
     val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     val fechaStr = dateFormat.format(pedido.fecha.toDate())
-
     var expanded by remember { mutableStateOf(false) }
     var showEstadoDialog by remember { mutableStateOf(false) }
-
     val estadoColor = when (pedido.estado) {
         "pendiente" -> MaterialTheme.colorScheme.tertiary
         "en_proceso" -> MaterialTheme.colorScheme.primary
         "completado" -> Color(0xFF4CAF50)
         else -> MaterialTheme.colorScheme.error
     }
-
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1110,7 +1068,6 @@ fun PedidoAdminCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
-
                 Surface(
                     color = estadoColor.copy(alpha = 0.2f),
                     shape = MaterialTheme.shapes.small,
@@ -1134,9 +1091,7 @@ fun PedidoAdminCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1148,7 +1103,6 @@ fun PedidoAdminCard(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-
             TextButton(
                 onClick = { expanded = !expanded },
                 modifier = Modifier.align(Alignment.End)
@@ -1159,7 +1113,6 @@ fun PedidoAdminCard(
                     contentDescription = null
                 )
             }
-
             if (expanded) {
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 pedido.detalles.forEach { detalle ->
@@ -1176,7 +1129,6 @@ fun PedidoAdminCard(
             }
         }
     }
-
     if (showEstadoDialog) {
         AlertDialog(
             onDismissRequest = { showEstadoDialog = false },
@@ -1238,7 +1190,6 @@ fun ProductosCrudScreen(
     val productos by productoViewModel.productos.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var selectedProducto by remember { mutableStateOf<Producto?>(null) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1282,7 +1233,6 @@ fun ProductosCrudScreen(
             }
         }
     }
-
     if (showDialog) {
         ProductoDialog(
             producto = selectedProducto,
@@ -1306,7 +1256,6 @@ fun ProductoAdminCard(
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1334,7 +1283,6 @@ fun ProductoAdminCard(
                     else MaterialTheme.colorScheme.error
                 )
             }
-
             Row {
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary)
@@ -1345,7 +1293,6 @@ fun ProductoAdminCard(
             }
         }
     }
-
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -1381,7 +1328,6 @@ fun ProductoDialog(
     var precio by remember { mutableStateOf(producto?.precio?.toString() ?: "") }
     var categoria by remember { mutableStateOf(producto?.categoria ?: "") }
     var disponible by remember { mutableStateOf(producto?.disponible ?: true) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (producto != null) "Editar Producto" else "Nuevo Producto") },
@@ -1399,7 +1345,6 @@ fun ProductoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -1407,7 +1352,6 @@ fun ProductoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
-
                 OutlinedTextField(
                     value = precio,
                     onValueChange = { precio = it },
@@ -1418,7 +1362,6 @@ fun ProductoDialog(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
                     )
                 )
-
                 OutlinedTextField(
                     value = categoria,
                     onValueChange = { categoria = it },
@@ -1426,7 +1369,6 @@ fun ProductoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -1496,7 +1438,6 @@ fun PromocionesScreen(
     val promociones by adminViewModel.promociones.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var selectedPromocion by remember { mutableStateOf<Promocion?>(null) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1551,7 +1492,6 @@ fun PromocionesScreen(
             }
         }
     }
-
     if (showDialog) {
         PromocionDialog(
             promocion = selectedPromocion,
@@ -1576,7 +1516,6 @@ fun PromocionCard(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1620,7 +1559,6 @@ fun PromocionCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
-
             Row {
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary)
@@ -1631,7 +1569,6 @@ fun PromocionCard(
             }
         }
     }
-
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -1665,7 +1602,6 @@ fun PromocionDialog(
     var nombre by remember { mutableStateOf(promocion?.nombre ?: "") }
     var descripcion by remember { mutableStateOf(promocion?.descripcion ?: "") }
     var puntos by remember { mutableStateOf(promocion?.puntos_requeridos?.toString() ?: "") }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (promocion != null) "Editar Promoción" else "Nueva Promoción") },
@@ -1683,7 +1619,6 @@ fun PromocionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
@@ -1691,7 +1626,6 @@ fun PromocionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
-
                 OutlinedTextField(
                     value = puntos,
                     onValueChange = { puntos = it },
@@ -1770,15 +1704,12 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-
     val authState by authViewModel.authState.collectAsState()
-
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
             onLoginSuccess((authState as AuthState.Authenticated).usuario)
         }
     }
-
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
@@ -1788,27 +1719,20 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-
-
             Spacer(modifier = Modifier.height(32.dp))
-
             Text(
                 text = "Cafetería Universitaria",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = "Bienvenido de vuelta",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
-
             Spacer(modifier = Modifier.height(32.dp))
-
             // Email Field
             OutlinedTextField(
                 value = email,
@@ -1819,9 +1743,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             // Password Field
             OutlinedTextField(
                 value = password,
@@ -1844,9 +1766,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             // Login Button
             Button(
                 onClick = {
@@ -1868,14 +1788,11 @@ fun LoginScreen(
                     Text("Iniciar Sesión", style = MaterialTheme.typography.titleMedium)
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             // Register Link
             TextButton(onClick = onNavigateToRegister) {
                 Text("¿No tienes cuenta? Regístrate")
             }
-
             // Error Message
             if (authState is AuthState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -1925,16 +1842,13 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-
     val authState by authViewModel.authState.collectAsState()
     val scrollState = rememberScrollState()
-
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
             onRegisterSuccess()
         }
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -1955,17 +1869,13 @@ fun RegisterScreen(
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Text(
                 text = "Únete a nosotros",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
-
             Spacer(modifier = Modifier.height(24.dp))
-
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -1974,9 +1884,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -1986,9 +1894,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = telefono,
                 onValueChange = { telefono = it },
@@ -1998,9 +1904,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -2021,9 +1925,7 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
@@ -2045,7 +1947,6 @@ fun RegisterScreen(
                 singleLine = true,
                 isError = confirmPassword.isNotEmpty() && password != confirmPassword
             )
-
             if (confirmPassword.isNotEmpty() && password != confirmPassword) {
                 Text(
                     text = "Las contraseñas no coinciden",
@@ -2054,9 +1955,7 @@ fun RegisterScreen(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp)
                 )
             }
-
             Spacer(modifier = Modifier.height(24.dp))
-
             Button(
                 onClick = {
                     if (nombre.isNotBlank() && email.isNotBlank() &&
@@ -2082,7 +1981,6 @@ fun RegisterScreen(
                     Text("Registrarse", style = MaterialTheme.typography.titleMedium)
                 }
             }
-
             if (authState is AuthState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -2132,7 +2030,6 @@ fun CarritoScreen(
     val total = carritoViewModel.total
     val pedidoCreado by pedidoViewModel.pedidoCreado.collectAsState()
     val currentUser by authViewModel.currentUser.collectAsState()
-
     LaunchedEffect(pedidoCreado) {
         if (pedidoCreado) {
             carritoViewModel.limpiarCarrito()
@@ -2140,7 +2037,6 @@ fun CarritoScreen(
             onFinalizarCompra()
         }
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2174,9 +2070,7 @@ fun CarritoScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
-
                         Spacer(modifier = Modifier.height(16.dp))
-
                         Button(
                             onClick = {
                                 currentUser?.let { user ->
@@ -2279,7 +2173,6 @@ fun CarritoItemCard(
                     }
                 }
             }
-
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "$${String.format("%.2f", item.subtotal)}",
@@ -2338,7 +2231,6 @@ fun HomeScreen(
     val productos by productoViewModel.productos.collectAsState()
     val isLoading by productoViewModel.isLoading.collectAsState()
     val cantidadCarrito by carritoViewModel.cantidadItems.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2365,7 +2257,6 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -2376,7 +2267,6 @@ fun HomeScreen(
                 CircularProgressIndicator()
             }
         } else {
-
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
@@ -2386,8 +2276,6 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-
                 if (promociones.isNotEmpty()) {
                     item(span = { GridItemSpan(2) }) {
                         Column(
@@ -2397,14 +2285,12 @@ fun HomeScreen(
                                 text = "Promociones",
                                 style = MaterialTheme.typography.titleLarge
                             )
-
                             promociones.forEach { promo ->
                                 PromocionesCard(promocion = promo)
                             }
                         }
                     }
                 }
-
                 items(productos.filter { it.disponible }) { producto ->
                     ProductoCard(
                         producto = producto,
@@ -2450,13 +2336,11 @@ fun PedidosScreen(
 ) {
     val pedidos by pedidoViewModel.pedidos.collectAsState()
     val uid = FirebaseAuth.getInstance().currentUser?.uid
-
     LaunchedEffect(uid) {
         if (uid != null) {
             pedidoViewModel.cargarPedidosUsuario(uid)
         }
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2469,7 +2353,6 @@ fun PedidosScreen(
             )
         }
     ) { padding ->
-
         if (uid == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Usuario no autenticado")
@@ -2498,12 +2381,9 @@ fun PedidosScreen(
 
 @Composable
 fun PedidoCard(pedido: Pedido) {
-
     val dateFormat = remember {
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     }
-
-    // 🔐 Fecha ultra segura
     val fechaStr = try {
         when (val f = pedido.fecha) {
             is com.google.firebase.Timestamp -> dateFormat.format(f.toDate())
@@ -2513,14 +2393,11 @@ fun PedidoCard(pedido: Pedido) {
     } catch (e: Exception) {
         "Fecha no disponible"
     }
-
-    // 🔐 ID ultra seguro
     val pedidoId = try {
         pedido.id.takeIf { it.length >= 8 }?.take(8) ?: "--------"
     } catch (e: Exception) {
         "--------"
     }
-
     val (estadoTexto, estadoColor) = when (pedido.estado) {
         "pendiente" -> "Pendiente" to MaterialTheme.colorScheme.tertiary
         "en_proceso" -> "En Proceso" to MaterialTheme.colorScheme.primary
@@ -2528,10 +2405,8 @@ fun PedidoCard(pedido: Pedido) {
         "cancelado" -> "Cancelado" to MaterialTheme.colorScheme.error
         else -> "Desconocido" to MaterialTheme.colorScheme.outline
     }
-
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -2548,13 +2423,9 @@ fun PedidoCard(pedido: Pedido) {
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
             Text(fechaStr, style = MaterialTheme.typography.bodySmall)
-
             Spacer(modifier = Modifier.height(12.dp))
-
-            // 🔐 Detalles ultra seguros
             if (pedido.detalles.isNullOrEmpty()) {
                 Text("Sin productos")
             } else {
@@ -2568,9 +2439,7 @@ fun PedidoCard(pedido: Pedido) {
                     }
                 }
             }
-
             Divider(modifier = Modifier.padding(vertical = 8.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -2608,7 +2477,6 @@ fun PerfilScreen(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val currentUser by authViewModel.currentUser.collectAsState()
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2642,14 +2510,11 @@ fun PerfilScreen(
                         modifier = Modifier.size(80.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
-
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Text(
                         text = currentUser?.nombre ?: "Usuario",
                         style = MaterialTheme.typography.headlineSmall
                     )
-
                     Text(
                         text = currentUser?.correo ?: "",
                         style = MaterialTheme.typography.bodyMedium,
@@ -2657,9 +2522,7 @@ fun PerfilScreen(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -2673,17 +2536,8 @@ fun PerfilScreen(
                         label = "Teléfono",
                         value = currentUser?.telefono ?: "-"
                     )
-
                     Divider(modifier = Modifier.padding(vertical = 12.dp))
-
-                    /*ProfileInfoRow(
-                        icon = Icons.Default.Star,
-                        label = "Puntos Acumulados",
-                        value = currentUser?.puntos_acumulados?.toString() ?: "0"
-                    )*/
-
                     Divider(modifier = Modifier.padding(vertical = 12.dp))
-
                     ProfileInfoRow(
                         icon = Icons.Default.AdminPanelSettings,
                         label = "Rol",
@@ -2691,9 +2545,7 @@ fun PerfilScreen(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.weight(1f))
-
             Button(
                 onClick = onLogout,
                 modifier = Modifier
@@ -2769,14 +2621,11 @@ fun ProductoDetalleScreen(
 ) {
     var cantidad by remember { mutableStateOf(1) }
     var productoAgregado by remember { mutableStateOf(false) }
-
     LaunchedEffect(productoId) {
         // Aquí podrías cargar detalles específicos del producto si es necesario
     }
-
     val productos by productoViewModel.productos.collectAsState()
     val producto = productos.find { it.id == productoId }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -2804,38 +2653,29 @@ fun ProductoDetalleScreen(
                         .height(300.dp),
                     contentScale = ContentScale.Crop
                 )*/
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Text(
                     text = producto.nombre,
                     style = MaterialTheme.typography.headlineMedium
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Text(
                     text = "$${producto.precio}",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Text(
                     text = producto.descripcion,
                     style = MaterialTheme.typography.bodyLarge
                 )
-
                 Spacer(modifier = Modifier.height(24.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Cantidad:", style = MaterialTheme.typography.titleMedium)
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { if (cantidad > 1) cantidad-- }) {
                             Icon(Icons.Default.Remove, "Disminuir")
@@ -2850,9 +2690,7 @@ fun ProductoDetalleScreen(
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(24.dp))
-
                 Button(
                     onClick = {
                         repeat(cantidad) {
@@ -2866,7 +2704,6 @@ fun ProductoDetalleScreen(
                 ) {
                     Text("Agregar al Carrito - $${producto.precio * cantidad}")
                 }
-
                 if (productoAgregado) {
                     Snackbar(
                         modifier = Modifier.padding(top = 16.dp)
@@ -2953,7 +2790,6 @@ fun CafeteriaUniversitariaTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -2962,7 +2798,6 @@ fun CafeteriaUniversitariaTheme(
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
-
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
@@ -3019,14 +2854,11 @@ import kotlinx.coroutines.launch
 
 class AdminViewModel : ViewModel() {
     private val repository = PromocionRepository()
-
     private val _promociones = MutableStateFlow<List<Promocion>>(emptyList())
     val promociones: StateFlow<List<Promocion>> = _promociones
-
     init {
         cargarPromociones()
     }
-
     private fun cargarPromociones() {
         viewModelScope.launch {
             repository.getPromociones().collect { promociones ->
@@ -3034,19 +2866,16 @@ class AdminViewModel : ViewModel() {
             }
         }
     }
-
     fun agregarPromocion(promocion: Promocion) {
         viewModelScope.launch {
             repository.agregarPromocion(promocion)
         }
     }
-
     fun actualizarPromocion(id: String, promocion: Promocion) {
         viewModelScope.launch {
             repository.actualizarPromocion(id, promocion)
         }
     }
-
     fun eliminarPromocion(id: String) {
         viewModelScope.launch {
             repository.eliminarPromocion(id)
@@ -3067,17 +2896,13 @@ import kotlinx.coroutines.launch
 
 class AuthViewModel : ViewModel() {
     private val repository = AuthRepository()
-
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
-
     private val _currentUser = MutableStateFlow<Usuario?>(null)
     val currentUser: StateFlow<Usuario?> = _currentUser
-
     init {
         checkAuthStatus()
     }
-
     private fun checkAuthStatus() {
         val user = repository.currentUser
         if (user != null) {
@@ -3090,7 +2915,6 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -3108,7 +2932,6 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-
     fun register(email: String, password: String, nombre: String, telefono: String, idUniversidad: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -3130,7 +2953,6 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
-
     fun logout() {
         repository.logout()
         _currentUser.value = null
@@ -3155,36 +2977,26 @@ import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.ItemCarrito
 import mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model.Producto
 
 class CarritoViewModel : ViewModel() {
-
     private val _items = MutableStateFlow<List<ItemCarrito>>(emptyList())
     val items: StateFlow<List<ItemCarrito>> = _items
-
     private val _cantidadItems = MutableStateFlow(0)
     val cantidadItems: StateFlow<Int> = _cantidadItems
-
     val total: Double
         get() = _items.value.sumOf { it.subtotal }
-
     fun agregarProducto(producto: Producto) {
-        //val itemExistente = _items.value.toMutableList()
-
         val itemExistente = _items.value.find { it.producto.id == producto.id }
-
         if (itemExistente != null) {
             itemExistente.cantidad++
             _items.value = _items.value.toList()
         } else {
             _items.value = _items.value + ItemCarrito(producto, 1)
         }
-
         _cantidadItems.value = _items.value.sumOf { it.cantidad }
     }
-
     fun eliminarProducto(productoId: String) {
         _items.value = _items.value.filter { it.producto.id != productoId }
         _cantidadItems.value = _items.value.sumOf { it.cantidad }
     }
-
     fun actualizarCantidad(productoId: String, cantidad: Int) {
         val item = _items.value.find { it.producto.id == productoId }
         if (item != null && cantidad > 0) {
@@ -3193,7 +3005,6 @@ class CarritoViewModel : ViewModel() {
         }
         _cantidadItems.value = _items.value.sumOf { it.cantidad }
     }
-
     fun limpiarCarrito() {
         _items.value = emptyList()
         _cantidadItems.value = 0
@@ -3216,13 +3027,10 @@ import kotlinx.coroutines.launch
 
 class PedidoViewModel : ViewModel() {
     private val repository = PedidoRepository()
-
     private val _pedidos = MutableStateFlow<List<Pedido>>(emptyList())
     val pedidos: StateFlow<List<Pedido>> = _pedidos
-
     private val _pedidoCreado = MutableStateFlow<Boolean>(false)
     val pedidoCreado: StateFlow<Boolean> = _pedidoCreado
-
     fun cargarPedidosUsuario(userId: String) {
         viewModelScope.launch {
             repository.getPedidosUsuario(userId).collect { pedidos ->
@@ -3230,7 +3038,6 @@ class PedidoViewModel : ViewModel() {
             }
         }
     }
-
     fun cargarTodosPedidos() {
         viewModelScope.launch {
             repository.getTodosPedidos().collect { pedidos ->
@@ -3238,7 +3045,6 @@ class PedidoViewModel : ViewModel() {
             }
         }
     }
-
     fun crearPedido(userId: String, items: List<ItemCarrito>) {
         viewModelScope.launch {
             val detalles = items.map { item ->
@@ -3250,7 +3056,6 @@ class PedidoViewModel : ViewModel() {
                     subtotal = item.subtotal
                 )
             }
-
             val pedido = Pedido(
                 id_usuario = userId,
                 fecha = Timestamp.now(),
@@ -3258,20 +3063,17 @@ class PedidoViewModel : ViewModel() {
                 estado = "pendiente",
                 detalles = detalles
             )
-
             val result = repository.crearPedido(pedido)
             result.onSuccess {
                 _pedidoCreado.value = true
             }
         }
     }
-
     fun actualizarEstado(pedidoId: String, nuevoEstado: String) {
         viewModelScope.launch {
             repository.actualizarEstadoPedido(pedidoId, nuevoEstado)
         }
     }
-
     fun resetPedidoCreado() {
         _pedidoCreado.value = false
     }
@@ -3291,17 +3093,13 @@ import android.net.Uri
 
 class ProductoViewModel : ViewModel() {
     private val repository = ProductoRepository()
-
     private val _productos = MutableStateFlow<List<Producto>>(emptyList())
     val productos: StateFlow<List<Producto>> = _productos
-
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
-
     init {
         cargarProductos()
     }
-
     private fun cargarProductos() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -3311,19 +3109,16 @@ class ProductoViewModel : ViewModel() {
             }
         }
     }
-
     fun agregarProducto(producto: Producto, imagenUri: Uri?) {
         viewModelScope.launch {
             repository.agregarProducto(producto, imagenUri)
         }
     }
-
     fun actualizarProducto(id: String, producto: Producto) {
         viewModelScope.launch {
             repository.actualizarProducto(id, producto)
         }
     }
-
     fun eliminarProducto(id: String) {
         viewModelScope.launch {
             repository.eliminarProducto(id)
@@ -3346,17 +3141,13 @@ import android.net.Uri
 
 class ProductoViewModel : ViewModel() {
     private val repository = ProductoRepository()
-
     private val _productos = MutableStateFlow<List<Producto>>(emptyList())
     val productos: StateFlow<List<Producto>> = _productos
-
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
-
     init {
         cargarProductos()
     }
-
     private fun cargarProductos() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -3366,19 +3157,16 @@ class ProductoViewModel : ViewModel() {
             }
         }
     }
-
     fun agregarProducto(producto: Producto, imagenUri: Uri?) {
         viewModelScope.launch {
             repository.agregarProducto(producto, imagenUri)
         }
     }
-
     fun actualizarProducto(id: String, producto: Producto) {
         viewModelScope.launch {
             repository.actualizarProducto(id, producto)
         }
     }
-
     fun eliminarProducto(id: String) {
         viewModelScope.launch {
             repository.eliminarProducto(id)
