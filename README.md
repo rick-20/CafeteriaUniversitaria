@@ -190,13 +190,19 @@ esta es la tabla que contiene los datos almacenar de los pedidos que realice el 
 ```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
+/**
+ * Modelo de datos que representa el detalle de un pedido.
+ * Contiene la información de cada producto incluido en un pedido.
+ */
 data class DetallePedido(
+
     val id_producto: String = "",
     val nombreProducto: String = "",
     val cantidad: Int = 0,
     val precio_unitario: Double = 0.0,
     val subtotal: Double = 0.0
 )
+
 ```
 El detalle pedido nos sirve para declarar los atributos del mismo, los cuales usaremos para almacenar los datos correspondientes.
 
@@ -205,13 +211,27 @@ Este "Item" nos sirve para declarar los atributos que tendrán los productos en 
 ```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
+/**
+ * Modelo que representa un producto dentro del carrito de compras.
+ * Contiene el producto y la cantidad seleccionada.
+ */
 data class ItemCarrito(
+
+    // Producto agregado al carrito
     val producto: Producto,
+
+    // Cantidad seleccionada del producto
     var cantidad: Int
 ) {
+
+    /**
+     * Calcula el subtotal del producto en el carrito.
+     * subtotal = precio del producto * cantidad
+     */
     val subtotal: Double
         get() = producto.precio * cantidad
 }
+
 ```
 
 data/model/Pedido.kt
@@ -221,14 +241,20 @@ package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 import com.google.firebase.Timestamp
 
+/**
+ * Modelo de datos que representa un pedido realizado por un usuario.
+ * Contiene la información general del pedido y el detalle de los productos.
+ */
 data class Pedido(
+
     val id: String = "",
     val id_usuario: String = "",
     val fecha: Timestamp = Timestamp.now(),
     val total: Double = 0.0,
-    val estado: String = "pendiente", // pendiente, en_proceso, completado, cancelado
+    val estado: String = "pendiente",
     val detalles: List<DetallePedido> = emptyList()
 )
+
 ```
 
 data/model/Producto.kt
@@ -236,7 +262,12 @@ Son los elementos que contendrá la tabla de los productos.
 ```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
+/**
+ * Modelo de datos que representa un producto de la cafetería.
+ * Contiene la información necesaria para mostrar y vender el producto.
+ */
 data class Producto(
+
     val id: String = "",
     val nombre: String = "",
     val descripcion: String = "",
@@ -245,6 +276,7 @@ data class Producto(
     val imagenUrl: String = "",
     val categoria: String = ""
 )
+
 ```
 
 data/model/Promocion.kt
@@ -254,7 +286,12 @@ package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 import com.google.firebase.Timestamp
 
+/**
+ * Modelo de datos que representa una promoción disponible en la cafetería.
+ * Las promociones pueden canjearse usando puntos acumulados.
+ */
 data class Promocion(
+
     val id: String = "",
     val nombre: String = "",
     val descripcion: String = "",
@@ -262,6 +299,7 @@ data class Promocion(
     val fecha_inicio: Timestamp = Timestamp.now(),
     val fecha_fin: Timestamp = Timestamp.now()
 )
+
 ```
 
 data/model/Usuario.kt
@@ -269,7 +307,12 @@ Atributos que recibe la tabla de los usuarios, los cuales serán utilez al momen
 ```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
+/**
+ * Modelo de datos que representa a un usuario del sistema.
+ * Puede ser un usuario normal o un administrador.
+ */
 data class Usuario(
+
     val id: String = "",
     val nombre: String = "",
     val correo: String = "",
@@ -277,8 +320,9 @@ data class Usuario(
     val telefono: String = "",
     val puntos_acumulados: Int = 0,
     val id_universidad: String = "",
-    val rol: String = "usuario" // "admin" o "usuario"
+    val rol: String = "usuario"
 )
+
 ```
   # data/repository
 Este paquete se utilizara para crear los repositorios, estos nos servirán para organizar y obtener el acceso a los datos de la app, facilitando la prueba y la moduladidad.
