@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/20a42fe1-2ceb-436f-b66b-3722197f5a26
 
 # Configuración inicial
 1. Archivo libs.version.toml
-
+```
 [versions]
 agp = "8.13.1"
 kotlin = "2.0.21"
@@ -171,7 +171,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.3.1")
     testImplementation(kotlin("test"))
 }
-
+```
 Explicación detallada:
 namespace = es el nombre de la app
 compileSdk = 36: La versión de Android que se usa para compilar
