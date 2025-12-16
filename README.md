@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/20a42fe1-2ceb-436f-b66b-3722197f5a26
 
 # Configuración inicial
 1. Archivo libs.version.toml
-```
+```toml
 [versions]
 agp = "8.13.1"
 kotlin = "2.0.21"
@@ -67,9 +67,11 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+```
 
 2. Archivo build.gradle.kts (Module: app)
 Este archivo es la lista de materiales que se usarán en el proyecto
+```kotlin
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -182,10 +184,10 @@ buildFeatures { compose = true }: Le decimos a Android que usaremos Jetpack Comp
   # Capa de DATOS
   # data/model
 La carpeta model nos sirve para crear las tablas de los medelos a usar, ejemplo: pedido, producto, usuario, etc..
-<img width="211" height="295" alt="image" src="https://github.com/user-attachments/assets/7f2b22fa-916b-47d1-a567-43320a6f81a2" />
 
 data/model/DetallePedido.kt
-```
+esta es la tabla que contiene los datos almacenar de los pedidos que realice el usuario.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class DetallePedido(
@@ -199,7 +201,8 @@ data class DetallePedido(
 El detalle pedido nos sirve para declarar los atributos del mismo, los cuales usaremos para almacenar los datos correspondientes.
 
 data/model/ItemCarrito.kt
-```
+Este "Item" nos sirve para declarar los atributos que tendrán los productos en el menú.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class ItemCarrito(
@@ -212,7 +215,8 @@ data class ItemCarrito(
 ```
 
 data/model/Pedido.kt
-```
+Como los anteriores, esta es la tabla con atributos del pedido, que serán almacenado en la base de datos, al momento de insertar, consultar, editar o eliminar.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 import com.google.firebase.Timestamp
@@ -228,7 +232,8 @@ data class Pedido(
 ```
 
 data/model/Producto.kt
-```
+Son los elementos que contendrá la tabla de los productos.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class Producto(
@@ -243,7 +248,8 @@ data class Producto(
 ```
 
 data/model/Promocion.kt
-```
+Atributos de la tabla de Promociones, los cuales servirán para el almacen de sus datos.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 import com.google.firebase.Timestamp
@@ -259,7 +265,8 @@ data class Promocion(
 ```
 
 data/model/Usuario.kt
-```
+Atributos que recibe la tabla de los usuarios, los cuales serán utilez al momento de registrar alumnos a la app.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.model
 
 data class Usuario(
@@ -277,7 +284,8 @@ data class Usuario(
 Este paquete se utilizara para crear los repositorios, estos nos servirán para organizar y obtener el acceso a los datos de la app, facilitando la prueba y la moduladidad.
 
 data/repository/AuthRepository.kt
-```
+Repositorio de autenticación, permite el registro y el logueo de los alumnos al momento de registrarse a la app.
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
@@ -381,7 +389,8 @@ class AuthRepository {
 ```
 
 data/repository/PedidoRepository.kt
-```
+Contiene los códigos que permitirán agregar, editar, consultar y/o eliminar los Pedidos
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -482,7 +491,7 @@ class PedidoRepository {
 ```
 
 data/repository/ProductoRepository.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -613,7 +622,7 @@ class ProductoRepository {
 ```
 
 data/repository/PromocionRepository.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
@@ -724,7 +733,7 @@ class PromocionRepository {
 # Capa de Interfaz de Usuario (UI)
 # ui/components
 ui/components/ProductoCard.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components
 
 import androidx.compose.foundation.layout.*
@@ -813,7 +822,7 @@ fun ProductoCard(
 ```
 
 ui/components/PromocionesCard.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.components
 
 import androidx.compose.foundation.layout.Column
@@ -870,7 +879,7 @@ fun PromocionesCard(
 Pasamos al apartado de UI con navegación
 
 ui/navegation/NavGraph.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.navegation
 
 import androidx.compose.runtime.Composable
@@ -1093,7 +1102,7 @@ fun NavGraph(
 ```
 
 ui/navegation/Screen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.navegation
 
 /**
@@ -1163,7 +1172,7 @@ Primero con las vistas correspondientes a los administradores
 
 screen/admin/AdminHomeScreen.kt
 Esta Screen se encargará de mostrar el "Inicio" de la vista del admin
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -1375,7 +1384,7 @@ fun AdminMenuCard(
 
 screen/admin/PedidosAdminScreen.kt
 Vista de los pedidos de admin, es decir, aquí le aparecerán los pedidos de los alumnos
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -1663,7 +1672,7 @@ fun PedidoAdminCard(
 ```
 
 screen/admin/ProductosCrudScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -2003,7 +2012,7 @@ fun ProductoDialog(
 ```
 
 screen/admin/PromocionesScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.admin
 
 import androidx.compose.foundation.layout.*
@@ -2342,7 +2351,7 @@ fun PromocionDialog(
 Este paquete será la autenticación, donde se guardará el inicio, registro y cierre de sesión de los usuarios
 
 screen/auth/LoginScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.auth
 
 import androidx.compose.foundation.layout.*
@@ -2530,7 +2539,7 @@ fun LoginScreen(
 ```
 
 screen/auth/RegistrerScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.auth
 
 import androidx.compose.foundation.layout.*
@@ -2794,7 +2803,7 @@ fun RegisterScreen(
 # Pasamos a las vistas de los usuarios (Clientes)
 # screen/usuario
 screen/usuario/CarritoScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 // Imports necesarios para Jetpack Compose y Material 3
@@ -3040,7 +3049,7 @@ fun CarritoItemCard(
 ```
 
 screen/usuario/HomeScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 // Imports necesarios para layouts, listas y grids en Compose
@@ -3207,7 +3216,7 @@ fun HomeScreen(
 ```
 
 screen/usuario/PedidosScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 // Imports para layouts y listas
@@ -3418,7 +3427,7 @@ fun PedidoCard(pedido: Pedido) {
 ```
 
 screen/usuario/PerfilScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 // Imports para layouts y componentes de Material
@@ -3602,7 +3611,7 @@ fun ProfileInfoRow(
 ```
 
 screen/usuario/ProductoDetalleScreen.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.screen.usuario
 
 // Imports para layouts, íconos y Material 3
@@ -3782,7 +3791,7 @@ fun ProductoDetalleScreen(
 
 # Pasamos a los temas y colores de la app
 theme/Color.kt
-```
+```kotlin
 // Paquete donde se definen los colores del tema de la aplicación
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.theme
 
@@ -3811,7 +3820,7 @@ val CreamDark = Color(0xFFFFE4B5)       // Crema oscuro, variación para contras
 ```
 
 theme/Theme.kt
-```
+```kotlin
 /****************************************************
  * Paquete donde se define el tema general de la app *
  ****************************************************/
@@ -3919,7 +3928,7 @@ fun CafeteriaUniversitariaTheme(
 ```
 
 theme/Type.kt
-```
+```kotlin
 /****************************************************
  * Paquete donde se define la tipografía de la app   *
  ****************************************************/
@@ -3979,7 +3988,7 @@ val Typography = Typography(
 Los viewModel sirven para almacenar y gestionar los datos de la interfaz de usuario (UI), separando la lógica de la UI de las actividades/fragmentos y sobreviviendo a cambios de configuración como la rotación de pantalla, lo que evita perder datos y reconstruir la UI innecesariamente.
 
 viewmodel/AdminViewModel.kt
-```
+```kotlin
 /****************************************************
  * ViewModel para la administración de promociones  *
  ****************************************************/
@@ -4065,7 +4074,7 @@ class AdminViewModel : ViewModel() {
 
 ```
 viewmodel/AuthViewModel.kt
-```
+```kotlin
 /****************************************************
  * ViewModel encargado de la autenticación de usuarios
  ****************************************************/
@@ -4226,7 +4235,7 @@ sealed class AuthState {
 ```
 
 viewmodel/CarritoViewModel.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -4316,7 +4325,7 @@ class CarritoViewModel : ViewModel() {
 ```
 
 viewmodel/PedidoViewModel.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -4431,7 +4440,7 @@ class PedidoViewModel : ViewModel() {
 ```
 
 viewmodel/ProductoViewModel.kt
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -4516,7 +4525,7 @@ class ProductoViewModel : ViewModel() {
 
 # Finalmente con MainActivity, desde donde se ejecutará y unirá cada complemento
 MainActivity
-```
+```kotlin
 package mx.edu.utng.cafeteria.cafeteriauniversitaria.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
